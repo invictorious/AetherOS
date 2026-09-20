@@ -74,13 +74,13 @@ static void ejecutar_linea(void) {
         user_println("");
         user_println("Comandos:");
         user_println("  cat <archivo>    - muestra archivo");
-        user_println("  run <bin>        - ejecuta como proceso");
+        user_println("  run <bin>        - ejecuta (ELF o PE)");
+        user_println("  exe              - HELLO.EXE");
+        user_println("  exe3             - HELLO3.EXE (msvcrt)");
+        user_println("  exe4             - HELLO4.EXE (CreateFile)");
         user_println("  pid              - muestra mi PID");
         user_println("  help             - esta ayuda");
         user_println("  clear            - limpia pantalla");
-        user_println("  win              - demo del ABI Windows x64");
-        user_println("  exe              - ejecuta HELLO.EXE");
-        user_println("  exe3             - ejecuta HELLO3.EXE (con msvcrt)");
         user_println("");
         return;
     }
@@ -91,42 +91,21 @@ static void ejecutar_linea(void) {
         return;
     }
     if (streq(line_buf, "clear")) {
-        user_print("\x1b[2J");
+        sys1(SYS_CLEAR, 0);
         return;
     }
+    if (streq(line_buf, "exe"))  { cmd_run("HELLO.EXE");  return; }
+    if (streq(line_buf, "exe3")) { cmd_run("HELLO3.EXE"); return; }
+    if (streq(line_buf, "exe4")) { cmd_run("HELLO4.EXE"); return; }
     if (starts_with(line_buf, "cat "))  { cmd_cat(line_buf + 4); return; }
-    if (streq(line_buf, "win")) {
-        cmd_run("WIN.BIN");
-        return;
-    }
-    if (streq(line_buf, "exe")) {
-        cmd_run("HELLO.EXE");
-        return;
-    }
-    if (streq(line_buf, "exe3")) {
-        cmd_run("HELLO3.EXE");
-        return;
-    }
-    if (streq(line_buf, "exe4")) {
-        cmd_run("HELLO4.EXE");
-        return;
-    }
     if (starts_with(line_buf, "run "))  { cmd_run(line_buf + 4); return; }
-    if (starts_with(line_buf, "exec ")) {
-        /* exec ahora es alias a run */
-        cmd_run(line_buf + 5);
-        return;
-    }
     user_println("[shell] comando desconocido");
 }
 
 void user_program(void) {
     user_print("\n");
-    user_print("================================\n");
-    user_print("  AetherOS v0.3.0 shell\n");
-    user_print("  procesos en ring 3\n");
-    user_print("================================\n\n");
-    user_print("Escribe 'help' para ver comandos.\n\n");
+    user_print(AETHEROS_BANNER_SHELL);
+    user_print("\nEscribe 'help' para ver comandos.\n\n");
     user_print("> ");
 
     for (;;) {

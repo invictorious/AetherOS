@@ -1,6 +1,7 @@
 #include "syscall.h"
 #include "console.h"
 #include "exec.h"
+#include "console.h"
 #include "process.h"
 #include "scheduler.h"
 #include "../drivers/keyboard.h"
@@ -115,6 +116,7 @@ uint64_t syscall_dispatch(uint64_t nr, uint64_t a1, uint64_t a2, uint64_t a3) {
         case SYS_OPEN:    return (uint64_t)sys_open((const char*)a1);
         case SYS_READ_FD: return (uint64_t)sys_read_fd((int)a1, (void*)a2, a3);
         case SYS_CLOSE:   return (uint64_t)sys_close((int)a1);
+        case SYS_CLEAR:   console_clear(); return 0;
         case SYS_EXEC:    return (uint64_t)sys_spawn((const char*)a1);  /* alias a spawn */
         case SYS_SPAWN:   return (uint64_t)sys_spawn((const char*)a1);
         case SYS_WAIT:    sys_wait((uint32_t)a1); return 0;
