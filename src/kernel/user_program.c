@@ -74,14 +74,17 @@ static void ejecutar_linea(void) {
         user_println("");
         user_println("Comandos:");
         user_println("  cat <archivo>    - muestra archivo");
-        user_println("  run <bin>        - ejecuta (ELF o PE)");
-        user_println("  exe              - HELLO.EXE");
-        user_println("  exe3             - HELLO3.EXE (msvcrt)");
-        user_println("  exe4             - HELLO4.EXE (CreateFile)");
-        user_println("  msgbox           - MSGBOX.EXE (MessageBoxA!)");
+        user_println("  run <archivo>    - ejecuta ELF o PE");
         user_println("  pid              - muestra mi PID");
         user_println("  help             - esta ayuda");
         user_println("  clear            - limpia pantalla");
+        user_println("");
+        user_println("Atajos:");
+        user_println("  exe              - run HELLO.EXE");
+        user_println("  exe3             - run HELLO3.EXE");
+        user_println("  exe4             - run HELLO4.EXE");
+        user_println("  msgbox           - run MSGBOX.EXE");
+        user_println("  win              - run WIN.BIN");
         user_println("");
         return;
     }
@@ -99,6 +102,7 @@ static void ejecutar_linea(void) {
     if (streq(line_buf, "exe3")) { cmd_run("HELLO3.EXE"); return; }
     if (streq(line_buf, "exe4")) { cmd_run("HELLO4.EXE"); return; }
     if (streq(line_buf, "msgbox")) { cmd_run("MSGBOX.EXE"); return; }
+    if (streq(line_buf, "win"))    { cmd_run("WIN.BIN");    return; }
     if (starts_with(line_buf, "cat "))  { cmd_cat(line_buf + 4); return; }
     if (starts_with(line_buf, "run "))  { cmd_run(line_buf + 4); return; }
     user_println("[shell] comando desconocido");
