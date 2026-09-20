@@ -19,7 +19,7 @@ start:
 
     mov bx, KERNEL_OFFSET
     mov ah, 0x02
-    mov al, 64
+    mov al, 32
     mov ch, 0
     mov cl, 2
     mov dh, 0
@@ -28,6 +28,11 @@ start:
     jc disk_error
 
     call query_e820
+
+    mov ax, 0xB800
+    mov es, ax
+    mov byte [es:0x0140], 'Q'
+    mov byte [es:0x0141], 0x0F
 
     jmp KERNEL_OFFSET
 
@@ -40,8 +45,8 @@ disk_error:
 query_e820:
     xor ax, ax
     mov es, ax
-    mov dword [0x8000], 0
-    mov di, 0x8004
+    mov dword [0x500], 0
+    mov di, 0x504
     xor ebx, ebx
 .loop:
     mov eax, 0xE820
@@ -53,7 +58,7 @@ query_e820:
     jne .done
     test ecx, ecx
     jz .done
-    inc dword [0x8000]
+    inc dword [0x500]
     add di, 24
     test ebx, ebx
     jnz .loop

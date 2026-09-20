@@ -47,7 +47,7 @@ $(BUILD)/aetheros.img: $(BUILD)/boot.bin $(BUILD)/kernel.bin
 	dd if=$(BUILD)/kernel.bin of=$@ bs=512 seek=1 conv=notrunc 2>/dev/null
 
 run: $(BUILD)/aetheros.img
-	$(QEMU) -fda $< -boot a -display curses
+	$(QEMU) -fda $< -boot a -display gtk
 
 clean:
 	rm -rf $(BUILD)

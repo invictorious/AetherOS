@@ -7,8 +7,8 @@ typedef struct __attribute__((packed)) {
     uint32_t acpi_attr;
 } e820_entry_t;
 
-#define E820_COUNT   (*(volatile uint32_t*)0x8000)
-#define E820_ENTRIES ((e820_entry_t*)0x8004)
+#define E820_COUNT   (*(volatile uint32_t*)0x500)
+#define E820_ENTRIES ((e820_entry_t*)0x504)
 #define E820_TYPE_FREE 1
 
 #define BITMAP_ADDR 0x200000

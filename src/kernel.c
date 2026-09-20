@@ -87,9 +87,9 @@ void kernel_main(void) {
 
     if (!s1 || !s2 || !s3) { print("  ERROR: kmalloc devolvio NULL\n"); }
     else {
-        for (int i = 0; i < 5; i++) s1[i] = 'A' + i; s1[5] = 0;
-        for (int i = 0; i < 5; i++) s2[i] = 'a' + i; s2[5] = 0;
-        for (int i = 0; i < 10; i++) s3[i] = '0' + i; s3[10] = 0;
+        for (int i = 0; i < 5; i++) { s1[i] = (char)('A' + i); } s1[5] = 0;
+        for (int i = 0; i < 5; i++) { s2[i] = (char)('a' + i); } s2[5] = 0;
+        for (int i = 0; i < 10; i++) { s3[i] = (char)('0' + i); } s3[10] = 0;
 
         print("  s1 = "); print(s1); print("\n");
         print("  s2 = "); print(s2); print("\n");
