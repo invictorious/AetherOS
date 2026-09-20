@@ -20,6 +20,7 @@ BOOT_ASM := src/arch/x86_64/boot.asm
 C_SRCS   := src/arch/x86_64/idt.c \
             src/arch/x86_64/gdt.c \
             src/kernel/kernel.c \
+            src/kernel/console.c \
             src/kernel/thread.c \
             src/kernel/scheduler.c \
             src/kernel/syscall.c \
@@ -63,18 +64,11 @@ $(BUILD)/aetheros.img: $(BUILD)/boot.bin $(BUILD)/kernel.bin
 run: $(BUILD)/aetheros.img
 	$(QEMU) -fda $< -boot a -display gtk
 
+debug: $(BUILD)/aetheros.img
+	@timeout 5 $(QEMU) -fda $< -boot a -display gtk -no-reboot -d int,cpu_reset -D /tmp/qemu.log || true
+	@tail -60 /tmp/qemu.log
+
 clean:
 	rm -rf $(BUILD)
 
-.PHONY: all run clean
-
-# --- Target de depuracion: ejecuta QEMU con log y muestra resultado ---
-debug: $(BUILD)/aetheros.img
-	@echo ""
-	@echo "=== Ejecutando QEMU con log (5 segundos)... ==="
-	@timeout 5 $(QEMU) -fda $< -boot a -display gtk -no-reboot -d int,cpu_reset -D /tmp/qemu.log || true
-	@echo ""
-	@echo "=== Ultimas 60 lineas del log ==="
-	@tail -60 /tmp/qemu.log
-	@echo ""
-	@echo "=== Si ves 'Triple fault', el fallo esta arriba ==="
+.PHONY: all run debug clean

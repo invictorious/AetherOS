@@ -1,7 +1,6 @@
 #include "syscall.h"
 
-/* Helpers de syscall en línea */
-static inline uint64_t do_syscall(uint64_t nr, uint64_t a1) {
+static inline uint64_t sys(uint64_t nr, uint64_t a1) {
     uint64_t ret;
     __asm__ volatile (
         "int $0x80"
@@ -12,26 +11,32 @@ static inline uint64_t do_syscall(uint64_t nr, uint64_t a1) {
     return ret;
 }
 
-static void user_print(const char *s) {
-    do_syscall(SYS_WRITE, (uint64_t)s);
+static inline uint64_t sys_read_key(void) {
+    return sys(SYS_READ, 0);
 }
 
-/* Programa de usuario: corre en ring 3 */
+static void user_print(const char *s) {
+    sys(SYS_WRITE, (uint64_t)s);
+}
+
 void user_program(void) {
     user_print("\n");
     user_print("================================\n");
     user_print("  Hola desde RING 3!\n");
-    user_print("  Este texto lo imprime codigo\n");
-    user_print("  de usuario, no el kernel.\n");
+    user_print("  Prueba a escribir teclas.\n");
     user_print("================================\n\n");
+    user_print("[USER] > ");
 
-    /* Probar el timer: los threads de kernel siguen corriendo */
-    user_print("[USER] Esperando...\n");
-    for (volatile int i = 0; i < 50000000; i++);
-
-    user_print("[USER] Listo. Saliendo...\n");
-    do_syscall(SYS_EXIT, 0);
-
-    /* Nunca se llega */
-    for (;;);
+    for (;;) {
+        uint64_t c = sys_read_key();
+        if (c != 0) {
+            char buf[2];
+            buf[0] = (char)c;
+            buf[1] = 0;
+            user_print(buf);
+            if (c == '\n') user_print("[USER] > ");
+        }
+        /* No busy-wait agresivo: pausa con pause */
+        __asm__ volatile ("pause");
+    }
 }
