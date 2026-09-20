@@ -3,11 +3,15 @@
 
 #include <stdint.h>
 
-/* Firmas */
-#define PE_DOS_MAGIC   0x5A4D       /* "MZ" */
-#define PE_SIG         0x00004550   /* "PE\0\0" */
+#define PE_DOS_MAGIC   0x5A4D
+#define PE_SIG         0x00004550
 #define PE_MACHINE_X64 0x8664
 #define PE_MAGIC_32PLUS 0x20B
+
+/* Tipos de relocation */
+#define IMAGE_REL_BASED_ABSOLUTE  0
+#define IMAGE_REL_BASED_HIGHLOW   3
+#define IMAGE_REL_BASED_DIR64     10
 
 typedef struct __attribute__((packed)) {
     uint16_t machine;
@@ -31,9 +35,9 @@ typedef struct __attribute__((packed)) {
     uint32_t size_code;
     uint32_t size_init;
     uint32_t size_uninit;
-    uint32_t entry_point;        /* RVA */
+    uint32_t entry_point;
     uint32_t base_code;
-    uint64_t image_base;         /* VA */
+    uint64_t image_base;
     uint32_t section_align;
     uint32_t file_align;
     uint16_t os_major, os_minor;
@@ -80,6 +84,12 @@ typedef struct __attribute__((packed)) {
     char     name[];
 } pe_hint_t;
 
+typedef struct __attribute__((packed)) {
+    uint32_t page_rva;
+    uint32_t block_size;
+} pe_reloc_block_t;
+
 uint64_t pe_load(const void *data, uint64_t size);
+uint64_t pe_load_at(const void *data, uint64_t size, uint64_t load_addr);
 
 #endif
