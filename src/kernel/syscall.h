@@ -11,6 +11,8 @@
 #define SYS_READ_FD    6
 #define SYS_CLOSE      7
 #define SYS_EXEC       8
+#define SYS_SPAWN      9
+#define SYS_WAIT       10
 
 void     syscall_init(void);
 uint64_t syscall_dispatch(uint64_t nr, uint64_t a1, uint64_t a2, uint64_t a3);
@@ -21,5 +23,7 @@ int64_t  sys_open(const char *name);
 int64_t  sys_read_fd(int fd, void *buf, uint64_t n);
 int64_t  sys_close(int fd);
 void     sys_exec(const char *path) __attribute__((noreturn));
+int64_t  sys_spawn(const char *path);
+void     sys_wait(uint32_t pid);
 
 #endif

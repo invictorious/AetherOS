@@ -171,12 +171,6 @@ int fat32_open(const char *name, fat32_dir_entry_t *out) {
                 *out = *e;
                 return 0;
             }
-            /* DEBUG: mostrar entradas vistas */
-            console_printf("  [dbg] entrada: '");
-            for (int i = 0; i < 8; i++) console_putchar(e->name[i]);
-            console_putchar('.');
-            for (int i = 0; i < 3; i++) console_putchar(e->ext[i]);
-            console_printf("' attr=0x%x\n", e->attr);
         }
         cluster = fat_next_cluster(cluster);
     }

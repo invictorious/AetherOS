@@ -32,7 +32,9 @@ C_SRCS   := src/arch/x86_64/idt.c \
             src/drivers/keyboard.c \
             src/drivers/ata.c \
             src/fs/fat32.c \
-            src/kernel/exec.c
+            src/kernel/exec.c \
+            src/kernel/process.c \
+            src/kernel/elf.c
 
 ARCH_OBJS := $(patsubst src/arch/x86_64/%.asm,$(BUILD)/%.o,$(ARCH_ASM))
 C_OBJS    := $(patsubst src/%.c,$(BUILD)/%.o,$(C_SRCS))

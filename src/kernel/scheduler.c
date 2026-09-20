@@ -1,57 +1,52 @@
 #include "scheduler.h"
-#include "../mm/heap.h"
+#include "console.h"
 
 extern void switch_stack(uint64_t new_rsp) __attribute__((noreturn));
+extern void tss_set_kernel_stack(uint64_t rsp0);
 
-static thread_t *head    = NULL;
-static thread_t *current = NULL;
+static process_t *current = NULL;
+static volatile int in_critical = 0;
 
-void scheduler_init(void) {
-    head = NULL;
-    current = NULL;
-}
+void scheduler_enter_critical(void) { in_critical = 1; }
+void scheduler_exit_critical(void)  { in_critical = 0; }
 
-void scheduler_add(thread_t *t) {
-    if (!t) return;
-    t->next = NULL;
-    if (!head) {
-        head = t;
-        t->next = t;
-    } else {
-        thread_t *p = head;
-        while (p->next != head) p = p->next;
-        p->next = t;
-        t->next = head;
-    }
-}
+void scheduler_init(void) { current = NULL; }
 
-thread_t *scheduler_current(void) {
-    return current;
+void scheduler_start(process_t *first) {
+    current = first;
+    current->state = PROC_RUNNING;
+    tss_set_kernel_stack(current->kernel_stack_top);
+    switch_stack(current->saved_rsp);
 }
 
 void scheduler_tick(registers_t *regs) {
-    /* Sin threads creados: no hacer nada */
-    if (!head) return;
+    if (!current) return;
+    if (in_critical) return;
 
-    if (!current) {
-        current = head;
-        current->state = THREAD_STATE_RUNNING;
-        switch_stack(current->rsp);
-    }
+    current->saved_rsp = (uint64_t)regs;
 
-    current->rsp = (uint64_t)regs;
-
-    thread_t *next = current->next;
+    /* Buscar siguiente proceso elegible:
+     * acepta RUNNING y READY, ignora ZOMBIE y BLOCKED */
+    process_t *next = current->next;
     while (next != current) {
-        if (next->state == THREAD_STATE_READY) break;
+        if (next->state == PROC_READY || next->state == PROC_RUNNING) break;
         next = next->next;
     }
 
-    if (next == current) return;
+    if (next == current) {
+        if (current->state == PROC_ZOMBIE) {
+            console_write("[sched] Sin procesos vivos\n");
+            for (;;) __asm__ volatile ("hlt");
+        }
+        return;
+    }
 
-    current->state = THREAD_STATE_READY;
-    next->state    = THREAD_STATE_RUNNING;
-    current        = next;
+    if (current->state == PROC_RUNNING) current->state = PROC_READY;
+    next->state = PROC_RUNNING;
+    current = next;
 
-    switch_stack(current->rsp);
+    tss_set_kernel_stack(current->kernel_stack_top);
+    switch_stack(current->saved_rsp);
 }
+
+process_t *scheduler_current(void) { return current; }

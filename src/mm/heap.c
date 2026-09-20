@@ -1,8 +1,14 @@
 #include "heap.h"
 #include <stdint.h>
 
-#define HEAP_START 0x400000
-#define HEAP_SIZE  0x1000000
+/* Mapa de memoria:
+ * 0x000000 - 0x200000 : kernel + page tables
+ * 0x300000 - 0x400000 : buffer FAT32
+ * 0x400000 - 0x800000 : usuario (ELF) + pila
+ * 0x1000000 - 0x1F00000 : HEAP (15 MB)
+ */
+#define HEAP_START 0x1000000
+#define HEAP_SIZE  0xF00000
 #define ALIGN 16
 #define ALIGN_UP(x) (((x) + (ALIGN - 1)) & ~(ALIGN - 1))
 

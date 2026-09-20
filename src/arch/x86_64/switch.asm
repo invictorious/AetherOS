@@ -7,6 +7,15 @@ global switch_stack
 switch_stack:
     mov rsp, rdi
 
+    ; Establecer segmentos de usuario (DPL=3) antes de iretq.
+    ; En 64-bit el base es 0 para todos, asi que cualquier valor
+    ; de DPL correcto sirve tanto para kernel como para user.
+    mov ax, 0x23
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
     pop r15
     pop r14
     pop r13

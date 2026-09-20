@@ -14,8 +14,8 @@ typedef struct __attribute__((packed)) {
 #define BITMAP_ADDR 0x200000
 #define BITMAP_SIZE (128 * 1024)
 
-#define HEAP_START  0x400000
-#define HEAP_SIZE   0x1000000
+#define HEAP_START  0x1000000
+#define HEAP_SIZE   0xF00000
 
 static uint8_t  *bitmap = (uint8_t*)BITMAP_ADDR;
 static uint64_t total_pages = 0;

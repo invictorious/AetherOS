@@ -1,6 +1,8 @@
 #include "syscall.h"
 #include "console.h"
 #include "exec.h"
+#include "process.h"
+#include "scheduler.h"
 #include "../drivers/keyboard.h"
 #include "../fs/fat32.h"
 
@@ -23,15 +25,10 @@ void syscall_init(void) {
 void sys_write(const char *s) { console_write(s); }
 
 void sys_exit(int code) {
-    (void)code;
-    console_write("\n[USER] Proceso termino.\n");
-    for (;;) __asm__ volatile ("hlt");
+    process_exit(code);
 }
 
-void sys_exec(const char *path) {
-    exec_run(path);
-    for (;;) __asm__ volatile ("hlt");
-}
+void sys_wait(uint32_t pid) { process_wait(pid); }
 
 uint64_t sys_read(void) {
     if (!keyboard_has_key()) return 0;
@@ -74,16 +71,53 @@ int64_t sys_close(int fd) {
     return 0;
 }
 
+void sys_exec(const char *path) {
+    exec_run(path);
+}
+
+/* Spawn: crea un proceso nuevo desde un ELF y lo mete en el scheduler */
+int64_t sys_spawn(const char *path) {
+    /* Sin preemption durante el spawn: el hijo no debe correr
+     * hasta que volvamos al shell */
+    __asm__ volatile ("cli");
+
+    extern void scheduler_enter_critical(void);
+    extern void scheduler_exit_critical(void);
+    scheduler_enter_critical();
+
+    uint64_t entry = exec_load_elf(path);
+    if (entry == 0) {
+        scheduler_exit_critical();
+        __asm__ volatile ("sti");
+        return -1;
+    }
+
+    process_t *p = process_create(entry);
+    if (!p) {
+        scheduler_exit_critical();
+        __asm__ volatile ("sti");
+        return -1;
+    }
+
+    process_add(p);
+
+    scheduler_exit_critical();
+    __asm__ volatile ("sti");
+    return (int64_t)p->pid;
+}
+
 uint64_t syscall_dispatch(uint64_t nr, uint64_t a1, uint64_t a2, uint64_t a3) {
     switch (nr) {
         case SYS_WRITE:   sys_write((const char*)a1); return 0;
         case SYS_EXIT:    sys_exit((int)a1); return 0;
-        case SYS_GETPID:  return 1;
+        case SYS_GETPID:  return process_current_pid();
         case SYS_READ:    return sys_read();
         case SYS_OPEN:    return (uint64_t)sys_open((const char*)a1);
         case SYS_READ_FD: return (uint64_t)sys_read_fd((int)a1, (void*)a2, a3);
         case SYS_CLOSE:   return (uint64_t)sys_close((int)a1);
-        case SYS_EXEC:    sys_exec((const char*)a1); return 0;
+        case SYS_EXEC:    return (uint64_t)sys_spawn((const char*)a1);  /* alias a spawn */
+        case SYS_SPAWN:   return (uint64_t)sys_spawn((const char*)a1);
+        case SYS_WAIT:    sys_wait((uint32_t)a1); return 0;
         default:
             console_write("[SYSCALL] numero desconocido\n");
             return (uint64_t)-1;
