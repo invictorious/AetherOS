@@ -1,5 +1,6 @@
 #include "syscall.h"
 #include "console.h"
+#include "exec.h"
 #include "../drivers/keyboard.h"
 #include "../fs/fat32.h"
 
@@ -24,6 +25,11 @@ void sys_write(const char *s) { console_write(s); }
 void sys_exit(int code) {
     (void)code;
     console_write("\n[USER] Proceso termino.\n");
+    for (;;) __asm__ volatile ("hlt");
+}
+
+void sys_exec(const char *path) {
+    exec_run(path);
     for (;;) __asm__ volatile ("hlt");
 }
 
@@ -77,6 +83,7 @@ uint64_t syscall_dispatch(uint64_t nr, uint64_t a1, uint64_t a2, uint64_t a3) {
         case SYS_OPEN:    return (uint64_t)sys_open((const char*)a1);
         case SYS_READ_FD: return (uint64_t)sys_read_fd((int)a1, (void*)a2, a3);
         case SYS_CLOSE:   return (uint64_t)sys_close((int)a1);
+        case SYS_EXEC:    sys_exec((const char*)a1); return 0;
         default:
             console_write("[SYSCALL] numero desconocido\n");
             return (uint64_t)-1;
