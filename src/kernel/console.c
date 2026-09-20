@@ -24,6 +24,10 @@ static const uint32_t palette[16] = {
     RGB(255, 255, 255),  /* F blanco */
 };
 
+static int      silent_mode = 0;
+
+void console_set_silent(int s) { silent_mode = s; }
+
 static int      cols = 0;
 static int      rows = 0;
 static int      cx = 0;   /* columna actual */
@@ -87,6 +91,7 @@ static char utf8_to_cp437(uint8_t b2) {
 }
 
 void console_putchar(char c) {
+    if (silent_mode) return;
     uint8_t b = (uint8_t)c;
     if (utf8_pending) {
         utf8_pending = 0;

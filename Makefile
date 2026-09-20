@@ -37,6 +37,7 @@ C_SRCS   := src/arch/x86_64/idt.c \
             src/fs/fat32.c \
             src/kernel/exec.c \
             src/kernel/process.c \
+            src/kernel/window.c \
             src/win/kernel32.c \
             src/win/exports.c \
             src/win/pe.c \

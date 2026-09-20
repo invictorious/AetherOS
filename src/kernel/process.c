@@ -42,9 +42,13 @@ process_t *process_find(uint32_t pid) {
     return NULL;
 }
 
+extern void console_printf(const char *fmt, ...);
+
 process_t *process_create(uint64_t entry) {
+    console_printf("[PROC] kmalloc process_t...\n");
     process_t *p = (process_t*)kmalloc(sizeof(process_t));
-    if (!p) return NULL;
+    if (!p) { console_printf("[PROC] fallo 1\n"); return NULL; }
+    console_printf("[PROC] ok 1\n");
 
     p->pid       = next_pid++;
     p->ppid      = process_current_pid();
@@ -54,12 +58,16 @@ process_t *process_create(uint64_t entry) {
     p->parent    = scheduler_current();
     p->next      = NULL;
 
+    console_printf("[PROC] kmalloc kstack...\n");
     uint8_t *kstack = (uint8_t*)kmalloc(KSTACK_SIZE);
-    if (!kstack) { kfree(p); return NULL; }
+    if (!kstack) { console_printf("[PROC] fallo 2\n"); kfree(p); return NULL; }
+    console_printf("[PROC] ok 2\n");
     p->kernel_stack_top = ((uint64_t)kstack + KSTACK_SIZE) & ~0xFULL;
 
+    console_printf("[PROC] kmalloc ustack...\n");
     uint8_t *ustack = (uint8_t*)kmalloc(USTACK_SIZE);
-    if (!ustack) { kfree(kstack); kfree(p); return NULL; }
+    if (!ustack) { console_printf("[PROC] fallo 3\n"); kfree(kstack); kfree(p); return NULL; }
+    console_printf("[PROC] ok 3\n");
     p->user_stack_top = ((uint64_t)ustack + USTACK_SIZE) & ~0xFULL;
 
     uint64_t *sp = (uint64_t*)p->kernel_stack_top;
@@ -75,6 +83,7 @@ process_t *process_create(uint64_t entry) {
     for (int i = 0; i < 15; i++) *(--sp) = 0;
 
     p->saved_rsp = (uint64_t)sp;
+    console_printf("[PROC] listo\n");
     return p;
 }
 

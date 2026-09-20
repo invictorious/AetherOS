@@ -79,12 +79,13 @@ static void ejecutar_linea(void) {
         user_println("  help             - esta ayuda");
         user_println("  clear            - limpia pantalla");
         user_println("");
-        user_println("Atajos:");
-        user_println("  exe              - run HELLO.EXE");
-        user_println("  exe3             - run HELLO3.EXE");
-        user_println("  exe4             - run HELLO4.EXE");
-        user_println("  msgbox           - run MSGBOX.EXE");
-        user_println("  win              - run WIN.BIN");
+        user_println("Demos:");
+        user_println("  exe              - hola mundo (PE)");
+        user_println("  exe3             - usa malloc/free (msvcrt)");
+        user_println("  exe4             - abre un archivo (CreateFile)");
+        user_println("  msgbox           - cuadro de dialogo");
+        user_println("  win              - demo del ABI binario");
+        user_println("  winapp           - aplicaciones con ventanas");
         user_println("");
         return;
     }
@@ -98,11 +99,12 @@ static void ejecutar_linea(void) {
         sys1(SYS_CLEAR, 0);
         return;
     }
-    if (streq(line_buf, "exe"))  { cmd_run("HELLO.EXE");  return; }
-    if (streq(line_buf, "exe3")) { cmd_run("HELLO3.EXE"); return; }
-    if (streq(line_buf, "exe4")) { cmd_run("HELLO4.EXE"); return; }
+    if (streq(line_buf, "exe"))    { cmd_run("HELLO.EXE");  return; }
+    if (streq(line_buf, "exe3"))   { cmd_run("HELLO3.EXE"); return; }
+    if (streq(line_buf, "exe4"))   { cmd_run("HELLO4.EXE"); return; }
     if (streq(line_buf, "msgbox")) { cmd_run("MSGBOX.EXE"); return; }
     if (streq(line_buf, "win"))    { cmd_run("WIN.BIN");    return; }
+    if (streq(line_buf, "winapp")) { cmd_run("WINAPP.EXE"); return; }
     if (starts_with(line_buf, "cat "))  { cmd_cat(line_buf + 4); return; }
     if (starts_with(line_buf, "run "))  { cmd_run(line_buf + 4); return; }
     user_println("[shell] comando desconocido");

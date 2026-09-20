@@ -34,6 +34,26 @@
 #define WIN_MESSAGEBOXA        0x3001
 #define WIN_MESSAGEBOXW        0x3002
 #define WIN_MESSAGEBEEP        0x3003
+#define WIN_CREATEWINDOWEXA    0x3004
+#define WIN_SHOWWINDOW         0x3005
+#define WIN_DESTROYWINDOW      0x3006
+#define WIN_SETWINDOWTEXTA     0x3007
+#define WIN_GETMESSAGE         0x3008
+#define WIN_DEFWINDOWPROC      0x3009
+#define WIN_GETDC              0x300A
+#define WIN_RELEASEDC          0x300B
+#define WIN_TEXTOUTA           0x300C
+#define WIN_UPDATEWINDOW       0x300D
+
+/* Estilos de ventana (simplificados) */
+#define WS_OVERLAPPEDWINDOW 0x00CF0000
+#define WS_VISIBLE          0x10000000
+#define SW_SHOW             5
+
+/* Colores de sistema para GDI */
+#define COLOR_WINDOW        5
+#define COLOR_WINDOWTEXT     8
+#define COLOR_BTNFACE       15
 
 /* Codigos de retorno de MessageBox */
 #define IDOK     1

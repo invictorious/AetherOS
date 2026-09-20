@@ -15,6 +15,8 @@
 #include "syscall.h"
 #include "console.h"
 #include "version.h"
+#include "../drivers/framebuffer.h"
+#include "window.h"
 
 volatile uint64_t ticks = 0;
 

@@ -26,6 +26,16 @@ extern void stub_WriteConsoleW(void);
 extern void stub_MessageBoxA(void);
 extern void stub_MessageBoxW(void);
 extern void stub_MessageBeep(void);
+extern void stub_CreateWindowExA(void);
+extern void stub_ShowWindow(void);
+extern void stub_DestroyWindow(void);
+extern void stub_SetWindowTextA(void);
+extern void stub_GetMessageA(void);
+extern void stub_DefWindowProcA(void);
+extern void stub_GetDC(void);
+extern void stub_ReleaseDC(void);
+extern void stub_TextOutA(void);
+extern void stub_UpdateWindow(void);
 
 extern void stub_strlen(void);
 extern void stub_strcmp(void);
@@ -71,6 +81,16 @@ static const win_export_t g_exports[] = {
     {"MessageBoxA",          (void*)stub_MessageBoxA},
     {"MessageBoxW",          (void*)stub_MessageBoxW},
     {"MessageBeep",          (void*)stub_MessageBeep},
+    {"CreateWindowExA",      (void*)stub_CreateWindowExA},
+    {"ShowWindow",           (void*)stub_ShowWindow},
+    {"DestroyWindow",        (void*)stub_DestroyWindow},
+    {"SetWindowTextA",       (void*)stub_SetWindowTextA},
+    {"GetMessageA",          (void*)stub_GetMessageA},
+    {"DefWindowProcA",       (void*)stub_DefWindowProcA},
+    {"GetDC",                (void*)stub_GetDC},
+    {"ReleaseDC",            (void*)stub_ReleaseDC},
+    {"TextOutA",             (void*)stub_TextOutA},
+    {"UpdateWindow",         (void*)stub_UpdateWindow},
 
     /* msvcrt */
     {"strlen",               (void*)stub_strlen},
