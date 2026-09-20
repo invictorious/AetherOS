@@ -29,7 +29,8 @@ C_SRCS   := src/arch/x86_64/idt.c \
             src/mm/heap.c \
             src/drivers/pic.c \
             src/drivers/pit.c \
-            src/drivers/keyboard.c
+            src/drivers/keyboard.c \
+            src/drivers/ata.c
 
 ARCH_OBJS := $(patsubst src/arch/x86_64/%.asm,$(BUILD)/%.o,$(ARCH_ASM))
 C_OBJS    := $(patsubst src/%.c,$(BUILD)/%.o,$(C_SRCS))
@@ -61,11 +62,15 @@ $(BUILD)/aetheros.img: $(BUILD)/boot.bin $(BUILD)/kernel.bin
 	dd if=$(BUILD)/boot.bin   of=$@ conv=notrunc 2>/dev/null
 	dd if=$(BUILD)/kernel.bin of=$@ bs=512 seek=1 conv=notrunc 2>/dev/null
 
-run: $(BUILD)/aetheros.img
-	$(QEMU) -fda $< -boot a -display gtk
+run: $(BUILD)/aetheros.img disk.img
+	$(QEMU) -fda $< -boot a \
+	        -drive file=disk.img,format=raw,if=ide,index=0 \
+	        -display gtk
 
-debug: $(BUILD)/aetheros.img
-	@timeout 5 $(QEMU) -fda $< -boot a -display gtk -no-reboot -d int,cpu_reset -D /tmp/qemu.log || true
+debug: $(BUILD)/aetheros.img disk.img
+	@timeout 5 $(QEMU) -fda $< -boot a \
+	        -drive file=disk.img,format=raw,if=ide,index=0 \
+	        -display gtk -no-reboot -d int,cpu_reset -D /tmp/qemu.log || true
 	@tail -60 /tmp/qemu.log
 
 clean:

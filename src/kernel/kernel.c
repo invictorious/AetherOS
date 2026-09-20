@@ -5,6 +5,7 @@
 #include "../drivers/pic.h"
 #include "../drivers/pit.h"
 #include "../drivers/keyboard.h"
+#include "../drivers/ata.h"
 #include "../mm/pmm.h"
 #include "../mm/heap.h"
 #include "thread.h"
@@ -54,6 +55,8 @@ void kernel_main(void) {
     register_interrupt_handler(33, keyboard_irq_handler);
     pit_init(100);
     keyboard_init();
+    /* Enmascarar TODAS las IRQs primero, luego solo habilitar timer y teclado */
+    for (int i = 0; i < 16; i++) pic_set_mask(i);
     pic_clear_mask(0);
     pic_clear_mask(1);
     console_printf("[OK] IDT + PIC + PIT + teclado\n");
@@ -66,6 +69,21 @@ void kernel_main(void) {
 
     syscall_init();
     console_printf("[OK] Syscalls\n");
+
+    /* --- Test del driver ATA --- */
+    ata_init();
+    ata_print_info();
+
+    /* Leer sector 0 (MBR) del disco y mostrar la firma */
+    static uint8_t mbr[512] __attribute__((aligned(16)));
+    if (ata_read_sectors(0, 1, mbr) == 0) {
+        uint16_t sig = (uint16_t)mbr[510] | ((uint16_t)mbr[511] << 8);
+        console_printf("[ATA] MBR firma: 0x%x\n", sig);
+        if (sig == 0xAA55) console_printf("[ATA] Disco valido (MBR OK)\n");
+        else                console_printf("[ATA] Disco sin MBR\n");
+    } else {
+        console_printf("[ATA] Error leyendo sector 0\n");
+    }
 
     console_printf("\nEntrando a ring 3...\n");
 
