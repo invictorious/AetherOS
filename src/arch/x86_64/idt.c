@@ -47,8 +47,8 @@ void idt_init(void) {
     idt_set_gate(33, (uint64_t)isr_irq1);
     idt_set_gate(0x80, (uint64_t)isr_syscall);
     idt_set_gate(0x81, (uint64_t)isr_win_syscall);
-    idt[0x80].type_attr = 0xEE;
-    idt[0x81].type_attr = 0xEE;
+    idt[0x80].type_attr = 0xEF;   /* trap gate */
+    idt[0x81].type_attr = 0xEF;   /* trap gate */
 
     idt_load((uint64_t)&idt_ptr);
 }

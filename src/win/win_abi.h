@@ -30,6 +30,20 @@
 #define WIN_FREELIBRARY        0x1016
 #define WIN_WRITECONSOLEW      0x1017
 
+/* user32 */
+#define WIN_MESSAGEBOXA        0x3001
+#define WIN_MESSAGEBOXW        0x3002
+#define WIN_MESSAGEBEEP        0x3003
+
+/* Codigos de retorno de MessageBox */
+#define IDOK     1
+#define IDCANCEL 2
+#define IDABORT  3
+#define IDRETRY  4
+#define IDIGNORE 5
+#define IDYES    6
+#define IDNO     7
+
 /* Flags de CreateFileA */
 #define GENERIC_READ    0x80000000
 #define GENERIC_WRITE   0x40000000

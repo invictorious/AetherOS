@@ -36,6 +36,11 @@ WINSTUB LoadLibraryA,      0x1015
 WINSTUB FreeLibrary,       0x1016
 WINSTUB WriteConsoleW,     0x1017
 
+; ---- user32 ----
+WINSTUB MessageBoxA,       0x3001
+WINSTUB MessageBoxW,       0x3002
+WINSTUB MessageBeep,       0x3003
+
 ; ---- msvcrt ----
 WINSTUB strlen,         0x2001
 WINSTUB strcmp,         0x2002

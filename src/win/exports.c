@@ -23,6 +23,9 @@ extern void stub_GetProcAddress(void);
 extern void stub_LoadLibraryA(void);
 extern void stub_FreeLibrary(void);
 extern void stub_WriteConsoleW(void);
+extern void stub_MessageBoxA(void);
+extern void stub_MessageBoxW(void);
+extern void stub_MessageBeep(void);
 
 extern void stub_strlen(void);
 extern void stub_strcmp(void);
@@ -63,6 +66,11 @@ static const win_export_t g_exports[] = {
     {"LoadLibraryA",         (void*)stub_LoadLibraryA},
     {"FreeLibrary",          (void*)stub_FreeLibrary},
     {"WriteConsoleW",        (void*)stub_WriteConsoleW},
+
+    /* user32 */
+    {"MessageBoxA",          (void*)stub_MessageBoxA},
+    {"MessageBoxW",          (void*)stub_MessageBoxW},
+    {"MessageBeep",          (void*)stub_MessageBeep},
 
     /* msvcrt */
     {"strlen",               (void*)stub_strlen},

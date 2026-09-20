@@ -39,6 +39,7 @@ C_SRCS   := src/arch/x86_64/idt.c \
             src/win/kernel32.c \
             src/win/exports.c \
             src/win/pe.c \
+            src/win/user32.c \
             src/kernel/elf.c
 
 ARCH_OBJS := $(patsubst src/arch/x86_64/%.asm,$(BUILD)/%.o,$(ARCH_ASM))

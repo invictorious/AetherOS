@@ -313,6 +313,12 @@ uint64_t win_dispatch(uint64_t nr, uint64_t a1, uint64_t a2,
         case WIN_FREE:    return win_free(a1);
 
         default:
+            /* Si es un syscall de user32 (0x3000+), delegar */
+            if (nr >= 0x3000 && nr < 0x4000) {
+                extern uint64_t user32_dispatch(uint64_t, uint64_t,
+                                                 uint64_t, uint64_t, uint64_t);
+                return user32_dispatch(nr, a1, a2, a3, a4);
+            }
             console_printf("[WIN] syscall 0x%x desconocida\n", (unsigned)nr);
             return 0;
     }
