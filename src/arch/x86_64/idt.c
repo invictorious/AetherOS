@@ -15,6 +15,7 @@ extern void isr_page_fault(void);
 extern void isr_irq0(void);
 extern void isr_irq1(void);
 extern void isr_syscall(void);
+extern void isr_win_syscall(void);
 
 #define VGA 0xB8000
 static void vga_put(int x, int y, char c, uint8_t color) {
@@ -50,6 +51,8 @@ void idt_init(void) {
     idt_set_gate(32, (uint64_t)isr_irq0);
     idt_set_gate(33, (uint64_t)isr_irq1);
     idt_set_gate(0x80, (uint64_t)isr_syscall);
+    idt_set_gate(0x81, (uint64_t)isr_win_syscall);
+    idt[0x81].type_attr = 0xEE;   /* accesible desde ring 3 */
 
     /* Cambiar DPL del gate 0x80 a 3 (accesible desde ring 3) */
     idt[0x80].type_attr = 0xEE;

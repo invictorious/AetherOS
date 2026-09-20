@@ -77,6 +77,7 @@ static void ejecutar_linea(void) {
         user_println("  pid              - muestra mi PID");
         user_println("  help             - esta ayuda");
         user_println("  clear            - limpia pantalla");
+        user_println("  win              - demo del ABI Windows x64");
         user_println("");
         return;
     }
@@ -91,6 +92,10 @@ static void ejecutar_linea(void) {
         return;
     }
     if (starts_with(line_buf, "cat "))  { cmd_cat(line_buf + 4); return; }
+    if (streq(line_buf, "win")) {
+        cmd_run("WIN.BIN");
+        return;
+    }
     if (starts_with(line_buf, "run "))  { cmd_run(line_buf + 4); return; }
     if (starts_with(line_buf, "exec ")) {
         /* exec ahora es alias a run */
