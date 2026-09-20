@@ -14,6 +14,7 @@
 #include "process.h"
 #include "syscall.h"
 #include "console.h"
+#include "version.h"
 #include "exec.h"
 
 volatile uint64_t ticks = 0;

@@ -20,6 +20,24 @@
 #define WIN_GETPROCESSHEAP     0x100C
 #define WIN_CLOSEHANDLE        0x100D
 #define WIN_GETPID             0x100E
+#define WIN_CREATEFILEA        0x100F
+#define WIN_WRITECONSOLEA      0x1010
+#define WIN_READCONSOLEA       0x1011
+#define WIN_SETCONSOLETITLEA   0x1012
+#define WIN_GETMODULEHANDLEA   0x1013
+#define WIN_GETPROCADDRESS     0x1014
+#define WIN_LOADLIBRARYA       0x1015
+#define WIN_FREELIBRARY        0x1016
+#define WIN_WRITECONSOLEW      0x1017
+
+/* Flags de CreateFileA */
+#define GENERIC_READ    0x80000000
+#define GENERIC_WRITE   0x40000000
+#define OPEN_EXISTING   3
+#define OPEN_ALWAYS     4
+#define CREATE_ALWAYS   2
+#define CREATE_NEW      1
+#define INVALID_HANDLE_VALUE ((uint64_t)-1)
 
 /* ------------------------------------------------------------
  * Syscalls msvcrt (base 0x2000) - puros, pero van por syscall

@@ -14,6 +14,15 @@ extern void stub_GetProcessHeap(void);
 extern void stub_CloseHandle(void);
 extern void stub_GetCurrentProcessId(void);
 extern void stub_GetCommandLineA(void);
+extern void stub_CreateFileA(void);
+extern void stub_WriteConsoleA(void);
+extern void stub_ReadConsoleA(void);
+extern void stub_SetConsoleTitleA(void);
+extern void stub_GetModuleHandleA(void);
+extern void stub_GetProcAddress(void);
+extern void stub_LoadLibraryA(void);
+extern void stub_FreeLibrary(void);
+extern void stub_WriteConsoleW(void);
 
 extern void stub_strlen(void);
 extern void stub_strcmp(void);
@@ -45,6 +54,15 @@ static const win_export_t g_exports[] = {
     {"CloseHandle",          (void*)stub_CloseHandle},
     {"GetCurrentProcessId",  (void*)stub_GetCurrentProcessId},
     {"GetCommandLineA",      (void*)stub_GetCommandLineA},
+    {"CreateFileA",          (void*)stub_CreateFileA},
+    {"WriteConsoleA",        (void*)stub_WriteConsoleA},
+    {"ReadConsoleA",         (void*)stub_ReadConsoleA},
+    {"SetConsoleTitleA",     (void*)stub_SetConsoleTitleA},
+    {"GetModuleHandleA",     (void*)stub_GetModuleHandleA},
+    {"GetProcAddress",       (void*)stub_GetProcAddress},
+    {"LoadLibraryA",         (void*)stub_LoadLibraryA},
+    {"FreeLibrary",          (void*)stub_FreeLibrary},
+    {"WriteConsoleW",        (void*)stub_WriteConsoleW},
 
     /* msvcrt */
     {"strlen",               (void*)stub_strlen},

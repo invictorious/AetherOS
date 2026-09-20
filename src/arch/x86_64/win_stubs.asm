@@ -26,6 +26,15 @@ WINSTUB GetProcessHeap, 0x100C
 WINSTUB CloseHandle,    0x100D
 WINSTUB GetCurrentProcessId, 0x100E
 WINSTUB GetCommandLineA, 0x1005
+WINSTUB CreateFileA,       0x100F
+WINSTUB WriteConsoleA,     0x1010
+WINSTUB ReadConsoleA,      0x1011
+WINSTUB SetConsoleTitleA,  0x1012
+WINSTUB GetModuleHandleA,  0x1013
+WINSTUB GetProcAddress,    0x1014
+WINSTUB LoadLibraryA,      0x1015
+WINSTUB FreeLibrary,       0x1016
+WINSTUB WriteConsoleW,     0x1017
 
 ; ---- msvcrt ----
 WINSTUB strlen,         0x2001

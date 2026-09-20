@@ -1,4 +1,5 @@
 #include "syscall.h"
+#include "version.h"
 
 static inline uint64_t sys3(uint64_t nr, uint64_t a1, uint64_t a2, uint64_t a3) {
     uint64_t ret;
@@ -104,6 +105,10 @@ static void ejecutar_linea(void) {
     }
     if (streq(line_buf, "exe3")) {
         cmd_run("HELLO3.EXE");
+        return;
+    }
+    if (streq(line_buf, "exe4")) {
+        cmd_run("HELLO4.EXE");
         return;
     }
     if (starts_with(line_buf, "run "))  { cmd_run(line_buf + 4); return; }
