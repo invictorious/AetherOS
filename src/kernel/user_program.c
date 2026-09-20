@@ -78,7 +78,8 @@ static void ejecutar_linea(void) {
         user_println("  help             - esta ayuda");
         user_println("  clear            - limpia pantalla");
         user_println("  win              - demo del ABI Windows x64");
-        user_println("  exe              - ejecuta HELLO.EXE (PE real)");
+        user_println("  exe              - ejecuta HELLO.EXE");
+        user_println("  exe3             - ejecuta HELLO3.EXE (con msvcrt)");
         user_println("");
         return;
     }
@@ -99,6 +100,10 @@ static void ejecutar_linea(void) {
     }
     if (streq(line_buf, "exe")) {
         cmd_run("HELLO.EXE");
+        return;
+    }
+    if (streq(line_buf, "exe3")) {
+        cmd_run("HELLO3.EXE");
         return;
     }
     if (starts_with(line_buf, "run "))  { cmd_run(line_buf + 4); return; }

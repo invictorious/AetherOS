@@ -1,11 +1,28 @@
 #include <stdint.h>
 
-/* Stubs en ASM que hacen int 0x81 en user space */
 extern void stub_GetStdHandle(void);
 extern void stub_WriteFile(void);
 extern void stub_ReadFile(void);
 extern void stub_ExitProcess(void);
 extern void stub_Sleep(void);
+extern void stub_GetLastError(void);
+extern void stub_SetLastError(void);
+extern void stub_GetTickCount(void);
+extern void stub_VirtualAlloc(void);
+extern void stub_VirtualFree(void);
+extern void stub_GetProcessHeap(void);
+extern void stub_CloseHandle(void);
+extern void stub_GetCurrentProcessId(void);
+extern void stub_GetCommandLineA(void);
+
+extern void stub_strlen(void);
+extern void stub_strcmp(void);
+extern void stub_strcpy(void);
+extern void stub_memcpy(void);
+extern void stub_memset(void);
+extern void stub_puts(void);
+extern void stub_malloc(void);
+extern void stub_free(void);
 
 typedef struct {
     const char *name;
@@ -13,11 +30,32 @@ typedef struct {
 } win_export_t;
 
 static const win_export_t g_exports[] = {
-    {"GetStdHandle", (void*)stub_GetStdHandle},
-    {"WriteFile",    (void*)stub_WriteFile},
-    {"ReadFile",     (void*)stub_ReadFile},
-    {"ExitProcess",  (void*)stub_ExitProcess},
-    {"Sleep",        (void*)stub_Sleep},
+    /* kernel32 */
+    {"GetStdHandle",         (void*)stub_GetStdHandle},
+    {"WriteFile",            (void*)stub_WriteFile},
+    {"ReadFile",             (void*)stub_ReadFile},
+    {"ExitProcess",          (void*)stub_ExitProcess},
+    {"Sleep",                (void*)stub_Sleep},
+    {"GetLastError",         (void*)stub_GetLastError},
+    {"SetLastError",         (void*)stub_SetLastError},
+    {"GetTickCount",         (void*)stub_GetTickCount},
+    {"VirtualAlloc",         (void*)stub_VirtualAlloc},
+    {"VirtualFree",          (void*)stub_VirtualFree},
+    {"GetProcessHeap",       (void*)stub_GetProcessHeap},
+    {"CloseHandle",          (void*)stub_CloseHandle},
+    {"GetCurrentProcessId",  (void*)stub_GetCurrentProcessId},
+    {"GetCommandLineA",      (void*)stub_GetCommandLineA},
+
+    /* msvcrt */
+    {"strlen",               (void*)stub_strlen},
+    {"strcmp",               (void*)stub_strcmp},
+    {"strcpy",               (void*)stub_strcpy},
+    {"memcpy",               (void*)stub_memcpy},
+    {"memset",               (void*)stub_memset},
+    {"puts",                 (void*)stub_puts},
+    {"malloc",               (void*)stub_malloc},
+    {"free",                 (void*)stub_free},
+
     {0, 0}
 };
 
