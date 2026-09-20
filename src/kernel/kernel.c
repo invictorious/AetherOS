@@ -6,6 +6,7 @@
 #include "../drivers/pit.h"
 #include "../drivers/keyboard.h"
 #include "../drivers/ata.h"
+#include "../fs/fat32.h"
 #include "../mm/pmm.h"
 #include "../mm/heap.h"
 #include "thread.h"
@@ -83,6 +84,13 @@ void kernel_main(void) {
         else                console_printf("[ATA] Disco sin MBR\n");
     } else {
         console_printf("[ATA] Error leyendo sector 0\n");
+    }
+
+    /* Solo montar FAT32, sin imprimir el contenido */
+    if (fat32_init() == 0) {
+        console_printf("[FAT32] Montado\n");
+    } else {
+        console_printf("[FAT32] Error al montar\n");
     }
 
     console_printf("\nEntrando a ring 3...\n");
