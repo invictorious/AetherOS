@@ -1,97 +1,132 @@
 #include "console.h"
+#include "../drivers/framebuffer.h"
 
-#define VGA_BUFFER 0xB8000
-#define VGA_COLOR  0x0F
-#define VGA_WIDTH  80
-#define VGA_HEIGHT 25
+#define CHAR_W 8
+#define CHAR_H 16
 
-static size_t cursor = 0;
-static volatile uint8_t *vga = (volatile uint8_t *)VGA_BUFFER;
+/* Paleta VGA estandar -> RGB */
+static const uint32_t palette[16] = {
+    RGB(0,   0,   0),    /* 0 negro */
+    RGB(0,   0,   170),  /* 1 azul */
+    RGB(0,   170, 0),    /* 2 verde */
+    RGB(0,   170, 170),  /* 3 cyan */
+    RGB(170, 0,   0),    /* 4 rojo */
+    RGB(170, 0,   170),  /* 5 magenta */
+    RGB(170, 85,  0),    /* 6 marron */
+    RGB(170, 170, 170),  /* 7 gris claro */
+    RGB(85,  85,  85),   /* 8 gris oscuro */
+    RGB(85,  85,  255),  /* 9 azul claro */
+    RGB(85,  255, 85),   /* A verde claro */
+    RGB(85,  255, 255),  /* B cyan claro */
+    RGB(255, 85,  85),   /* C rojo claro */
+    RGB(255, 85,  255),  /* D magenta claro */
+    RGB(255, 255, 85),   /* E amarillo */
+    RGB(255, 255, 255),  /* F blanco */
+};
+
+static int      cols = 0;
+static int      rows = 0;
+static int      cx = 0;   /* columna actual */
+static int      cy = 0;   /* fila actual */
+static uint8_t  current_attr = 0x0F;
+
+static uint32_t fg_color(uint8_t attr) { return palette[attr & 0x0F]; }
+static uint32_t bg_color(uint8_t attr) { return palette[(attr >> 4) & 0x0F]; }
+
+int console_init(void) {
+    if (fb_init() != 0) return -1;
+    cols = fb_width()  / CHAR_W;
+    rows = fb_height() / CHAR_H;
+    cx = 0;
+    cy = 0;
+    current_attr = 0x0F;
+    return 0;
+}
+
+void console_clear(void) {
+    fb_clear(bg_color(current_attr));
+    cx = 0;
+    cy = 0;
+}
+
+/* Scroll: mover todo hacia arriba CHAR_H pixeles */
+static void console_scroll(void) {
+    uint32_t fbsize = fb_height() * 0; /* dummy para no romper compilacion */
+    (void)fbsize;
+    uint32_t pitch = *(uint32_t*)0x5410;
+    uint32_t height = *(uint32_t*)0x540C;
+    volatile uint8_t *fb = (volatile uint8_t*)(uint64_t)*(uint32_t*)0x5404;
+    uint32_t move_bytes = (height - CHAR_H) * pitch;
+    for (uint32_t i = 0; i < move_bytes; i++) {
+        fb[i] = fb[i + CHAR_H * pitch];
+    }
+    /* Limpiar la ultima fila */
+    fb_fill_rect(0, (rows - 1) * CHAR_H,
+                 cols * CHAR_W, CHAR_H, bg_color(current_attr));
+}
+
+void console_put_at(int x, int y, char c, uint8_t color) {
+    if (x < 0 || y < 0 || x >= cols || y >= rows) return;
+    fb_draw_char(x * CHAR_W, y * CHAR_H, c, fg_color(color), bg_color(color));
+}
 
 static int utf8_pending = 0;
 
-static char utf8_to_cp437(uint8_t b1, uint8_t b2) {
-    (void)b1;
+static char utf8_to_cp437(uint8_t b2) {
     switch (b2) {
-        case 0xA0: return (char)0xA0;
-        case 0xA9: return (char)0x82;
-        case 0xAD: return (char)0xA1;
-        case 0xB3: return (char)0xA2;
-        case 0xBA: return (char)0xA3;
-        case 0xB1: return (char)0xA4;
-        case 0x91: return (char)0xA5;
-        case 0xBC: return (char)0x81;
-        case 0x9C: return (char)0x9A;
-        case 0xA1: return (char)0xA8;
-        case 0xB0: return (char)0xF8;
+        case 0xA0: return (char)0xA0;  /* á */
+        case 0xA9: return (char)0x82;  /* é */
+        case 0xAD: return (char)0xA1;  /* í */
+        case 0xB3: return (char)0xA2;  /* ó */
+        case 0xBA: return (char)0xA3;  /* ú */
+        case 0xB1: return (char)0xA4;  /* ñ */
+        case 0x91: return (char)0xA5;  /* Ñ */
+        case 0xBC: return (char)0x81;  /* ü */
     }
     return '?';
 }
 
-/* Scroll: mueve todo hacia arriba y limpia la ultima fila */
-static void console_scroll(void) {
-    for (size_t i = 0; i < VGA_WIDTH * (VGA_HEIGHT - 1); i++) {
-        vga[i * 2]     = vga[(i + VGA_WIDTH) * 2];
-        vga[i * 2 + 1] = vga[(i + VGA_WIDTH) * 2 + 1];
-    }
-    for (size_t i = 0; i < VGA_WIDTH; i++) {
-        size_t p = (VGA_HEIGHT - 1) * VGA_WIDTH + i;
-        vga[p * 2]     = ' ';
-        vga[p * 2 + 1] = VGA_COLOR;
-    }
-    cursor = (VGA_HEIGHT - 1) * VGA_WIDTH;
-}
-
-void console_init(void) { cursor = 0; utf8_pending = 0; }
-
-void console_clear(void) {
-    for (size_t i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) {
-        vga[i * 2]     = ' ';
-        vga[i * 2 + 1] = VGA_COLOR;
-    }
-    cursor = 0;
-}
-
 void console_putchar(char c) {
     uint8_t b = (uint8_t)c;
-
     if (utf8_pending) {
         utf8_pending = 0;
-        c = utf8_to_cp437(0xC3, b);
+        c = utf8_to_cp437(b);
     } else if (b == 0xC3) {
         utf8_pending = 1;
         return;
     }
-
     if (c == '\n') {
-        cursor += VGA_WIDTH - (cursor % VGA_WIDTH);
-        if (cursor >= VGA_WIDTH * VGA_HEIGHT) console_scroll();
+        cx = 0;
+        cy++;
+    } else if (c == '\r') {
+        cx = 0;
     } else if (c == '\b') {
-        if (cursor > 0) {
-            cursor--;
-            vga[cursor * 2]     = ' ';
-            vga[cursor * 2 + 1] = VGA_COLOR;
+        if (cx > 0) {
+            cx--;
+            fb_draw_char(cx * CHAR_W, cy * CHAR_H, ' ',
+                          fg_color(current_attr), bg_color(current_attr));
         }
     } else if (c == '\t') {
-        size_t next = (cursor + 8) & ~7ULL;
-        while (cursor < next) console_putchar(' ');
-    } else if (c == '\r') {
-        /* ignorar */
+        int next = (cx + 8) & ~7;
+        while (cx < next && cx < cols) console_putchar(' ');
     } else {
-        vga[cursor * 2]     = (uint8_t)c;
-        vga[cursor * 2 + 1] = VGA_COLOR;
-        cursor++;
-        if (cursor >= VGA_WIDTH * VGA_HEIGHT) console_scroll();
+        fb_draw_char(cx * CHAR_W, cy * CHAR_H, c,
+                      fg_color(current_attr), bg_color(current_attr));
+        cx++;
+        if (cx >= cols) { cx = 0; cy++; }
+    }
+
+    if (cy >= rows) {
+        console_scroll();
+        cy = rows - 1;
     }
 }
 
-void console_write(const char *s) { while (*s) console_putchar(*s++); }
-
-void console_put_at(int x, int y, char c, uint8_t color) {
-    vga[(y * VGA_WIDTH + x) * 2]     = (uint8_t)c;
-    vga[(y * VGA_WIDTH + x) * 2 + 1] = color;
+void console_write(const char *s) {
+    while (*s) console_putchar(*s++);
 }
 
+/* ------- printf minimo (igual que antes) ------- */
 static void print_uint(uint64_t v, int base, int width, char pad) {
     char buf[32];
     int i = 0;
@@ -137,7 +172,7 @@ void console_printf(const char *fmt, ...) {
                 const char *s = __builtin_va_arg(args, const char*);
                 int i = 0;
                 if (precision >= 0) {
-                    while (s[i] && i < precision) { console_putchar(s[i]); i++; }
+                    while (s[i] && i < precision) console_putchar(s[i++]);
                 } else {
                     while (*s) console_putchar(*s++);
                 }

@@ -29,6 +29,7 @@ C_SRCS   := src/arch/x86_64/idt.c \
             src/kernel/user_program.c \
             src/mm/pmm.c \
             src/mm/heap.c \
+            src/drivers/framebuffer.c \
             src/drivers/pic.c \
             src/drivers/pit.c \
             src/drivers/keyboard.c \
