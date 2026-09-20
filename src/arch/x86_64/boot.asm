@@ -1,7 +1,8 @@
 [BITS 16]
 [ORG 0x7C00]
 
-KERNEL_OFFSET equ 0x1000
+KERNEL_SEG     equ 0x1000       ; 0x1000:0x0000 = fisica 0x10000
+KERNEL_SECTORS equ 96
 
 start:
     cli
@@ -17,24 +18,57 @@ start:
     mov si, msg_loading
     call imprimir
 
-    mov bx, KERNEL_OFFSET
-    mov ah, 0x02
-    mov al, 32
+    ; Destino: ES:BX = 0x1000:0x0000 (fisica 0x10000)
+    mov ax, KERNEL_SEG
+    mov es, ax
+    xor bx, bx
+
+    mov si, KERNEL_SECTORS
     mov ch, 0
-    mov cl, 2
     mov dh, 0
+    mov cl, 2
+
+.read_one:
+    test si, si
+    jz .done
+
+    mov ah, 0x02
+    mov al, 1
     mov dl, [boot_drive]
     int 0x13
     jc disk_error
 
-    call query_e820
+    add bx, 512
+    jnc .no_wrap
+    mov ax, es
+    add ax, 0x1000
+    mov es, ax
+.no_wrap:
 
+    dec si
+
+    inc cl
+    cmp cl, 19
+    jb .read_one
+    mov cl, 1
+    inc dh
+    cmp dh, 2
+    jb .read_one
+    mov dh, 0
+    inc ch
+    jmp .read_one
+
+.done:
+    ; Marcador 'Q' (fila 2, col 0)
     mov ax, 0xB800
     mov es, ax
     mov byte [es:0x0140], 'Q'
     mov byte [es:0x0141], 0x0F
 
-    jmp KERNEL_OFFSET
+    call query_e820
+
+    ; Saltar al kernel: 0x1000:0x0000 = fisica 0x10000
+    jmp KERNEL_SEG:0x0000
 
 disk_error:
     mov si, msg_error

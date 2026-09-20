@@ -9,13 +9,13 @@ _start:
     mov byte [es:0x0001], 0x0F
 
     cli
-    lgdt [gdt_descriptor]
+    a32 lgdt [gdt_descriptor]         ; forzar direccionamiento 32-bit
 
     mov eax, cr0
     or eax, 1
     mov cr0, eax
 
-    jmp 0x08:pm32
+    jmp dword 0x08:pm32               ; far jump con offset 32-bit
 
 [BITS 32]
 pm32:

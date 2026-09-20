@@ -1,5 +1,5 @@
 #include "idt.h"
-#include "pic.h"
+#include "../../drivers/pic.h"
 
 #define IDT_ENTRIES 256
 
