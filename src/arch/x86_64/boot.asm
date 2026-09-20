@@ -2,7 +2,7 @@
 [ORG 0x7C00]
 
 KERNEL_SEG     equ 0x1000       ; 0x1000:0x0000 = fisica 0x10000
-KERNEL_SECTORS equ 96
+KERNEL_SECTORS equ 48
 
 start:
     cli

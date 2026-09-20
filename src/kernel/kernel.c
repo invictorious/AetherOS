@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "../arch/x86_64/idt.h"
+#include "../arch/x86_64/gdt.h"
 #include "../drivers/pic.h"
 #include "../drivers/pit.h"
 #include "../drivers/keyboard.h"
@@ -8,6 +9,7 @@
 #include "../mm/heap.h"
 #include "thread.h"
 #include "scheduler.h"
+#include "syscall.h"
 
 #define VGA_BUFFER 0xB8000
 #define VGA_COLOR  0x0F
@@ -38,20 +40,11 @@ void putchar(char c) {
 
 void print(const char *str) { while (*str) putchar(*str++); }
 
-void print_dec(uint64_t v) {
-    if (v == 0) { putchar('0'); return; }
-    char buf[24];
-    int i = 0;
-    while (v) { buf[i++] = '0' + (v % 10); v /= 10; }
-    while (i--) putchar(buf[i]);
-}
-
 void vga_put_at(int x, int y, char c, uint8_t color) {
     vga[(y * 80 + x) * 2]     = (uint8_t)c;
     vga[(y * 80 + x) * 2 + 1] = color;
 }
 
-/* --- Handlers --- */
 static void timer_handler(registers_t *regs) {
     ticks++;
     pic_send_eoi(0);
@@ -65,48 +58,34 @@ static void keyboard_irq_handler(registers_t *regs) {
     pic_send_eoi(1);
 }
 
-/* --- Threads de prueba --- */
-static void thread_a(void) {
-    uint64_t n = 0;
-    for (;;) {
-        vga_put_at(5, 20, 'A', 0x0A);
-        vga_put_at(6, 20, ':', 0x0A);
-        vga_put_at(7, 20, (char)('0' + (n % 10)), 0x0A);
-        n++;
-        for (volatile int i = 0; i < 10000000; i++);
-    }
-}
+/* Pila del kernel para cuando int 0x80 pase desde ring 3 */
+static uint8_t kernel_stack[16384] __attribute__((aligned(16)));
 
-static void thread_b(void) {
-    uint64_t n = 0;
-    for (;;) {
-        vga_put_at(20, 20, 'B', 0x0B);
-        vga_put_at(21, 20, ':', 0x0B);
-        vga_put_at(22, 20, (char)('0' + (n % 10)), 0x0B);
-        n++;
-        for (volatile int i = 0; i < 10000000; i++);
-    }
-}
+extern void enter_usermode(uint64_t entry, uint64_t user_stack) __attribute__((noreturn));
+extern void user_program(void);
 
-static void thread_c(void) {
-    uint64_t n = 0;
-    for (;;) {
-        vga_put_at(35, 20, 'C', 0x0E);
-        vga_put_at(36, 20, ':', 0x0E);
-        vga_put_at(37, 20, (char)('0' + (n % 10)), 0x0E);
-        n++;
-        for (volatile int i = 0; i < 10000000; i++);
-    }
-}
+/* Programa de usuario en ring 3 */
+static uint8_t user_stack[8192] __attribute__((aligned(16)));
 
 void kernel_main(void) {
+    __asm__ volatile ("cli");     /* Deshabilitar IRQs hasta que todo este listo */
+
     clear_screen();
 
     print("================================\n");
-    print("  AetherOS v0.0.7\n");
-    print("  Multitarea preemptiva\n");
+    print("  AetherOS v0.0.8\n");
+    print("  Syscalls + Ring 3\n");
     print("================================\n\n");
 
+    /* 1. GDT con segmentos de usuario + TSS */
+    gdt_init();
+    print("[OK] GDT + TSS listos\n");
+
+    /* Configurar la pila del kernel que usara el CPU al entrar desde ring 3 */
+    tss_set_kernel_stack((uint64_t)(kernel_stack + sizeof(kernel_stack)));
+    print("[OK] Pila del kernel para syscalls\n");
+
+    /* 2. IDT */
     idt_init();
     pic_remap(0x20, 0x28);
     register_interrupt_handler(32, timer_handler);
@@ -115,32 +94,25 @@ void kernel_main(void) {
     keyboard_init();
     pic_clear_mask(0);
     pic_clear_mask(1);
+    print("[OK] IDT + PIC + PIT + teclado\n");
 
+    /* 3. Memoria */
     pmm_init();
     heap_init();
-    print("[OK] Hardware + memoria listos\n");
+    print("[OK] PMM + Heap\n");
 
-    scheduler_init();
-    print("[OK] Scheduler inicializado\n");
+    /* 4. Syscalls */
+    syscall_init();
+    print("[OK] Syscalls inicializadas\n");
 
-    thread_t *a = thread_create(thread_a, 0, "A");
-    thread_t *b = thread_create(thread_b, 0, "B");
-    thread_t *c = thread_create(thread_c, 0, "C");
+    print("\nEntrando a ring 3...\n");
 
-    if (!a || !b || !c) {
-        print("[ERR] No se pudieron crear los threads\n");
-        for(;;) __asm__ volatile ("hlt");
-    }
+    /* 5. Saltar a ring 3 */
+    uint64_t user_stack_top = (uint64_t)(user_stack + sizeof(user_stack));
+    user_stack_top &= ~0xFULL;
 
-    scheduler_add(a);
-    scheduler_add(b);
-    scheduler_add(c);
+    enter_usermode((uint64_t)user_program, user_stack_top);
 
-    print("[OK] 3 threads creados\n\n");
-    print("Fila 20: A=verde  B=cyan  C=amarillo\n");
-    print("Los contadores avanzan a la vez.\n\n");
-
-    __asm__ volatile ("sti");
-
+    /* Nunca llegamos aqui */
     for (;;) __asm__ volatile ("hlt");
 }

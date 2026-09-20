@@ -9,13 +9,13 @@ _start:
     mov byte [es:0x0001], 0x0F
 
     cli
-    a32 lgdt [gdt_descriptor]         ; forzar direccionamiento 32-bit
+    a32 lgdt [gdt_descriptor]
 
     mov eax, cr0
     or eax, 1
     mov cr0, eax
 
-    jmp dword 0x08:pm32               ; far jump con offset 32-bit
+    jmp dword 0x08:pm32
 
 [BITS 32]
 pm32:
@@ -49,11 +49,16 @@ pm32:
     rep stosd
 
     mov edi, 0x100000
-    mov dword [edi],          0x101003
-    mov dword [edi + 0x1000], 0x102003
+    ; PML4[0] -> PDPT  (Present + RW + User)
+    mov dword [edi],          0x101007
+    mov dword [edi + 4],      0
+    ; PDPT[0] -> PD    (Present + RW + User)
+    mov dword [edi + 0x1000], 0x102007
+    mov dword [edi + 0x1004], 0
 
+    ; PD: 16 paginas de 2 MB con Present+RW+User+PS
     mov edi, 0x102000
-    mov eax, 0x00000083
+    mov eax, 0x00000087        ; P=1 RW=1 US=1 PS=1
     mov ecx, 16
 .fill_pd:
     mov dword [edi], eax

@@ -30,6 +30,9 @@ thread_t *scheduler_current(void) {
 }
 
 void scheduler_tick(registers_t *regs) {
+    /* Sin threads creados: no hacer nada */
+    if (!head) return;
+
     if (!current) {
         current = head;
         current->state = THREAD_STATE_RUNNING;

@@ -1,5 +1,6 @@
 #include "idt.h"
 #include "../../drivers/pic.h"
+#include "../../kernel/syscall.h"
 
 #define IDT_ENTRIES 256
 
@@ -13,6 +14,7 @@ extern void isr_divide_by_zero(void);
 extern void isr_page_fault(void);
 extern void isr_irq0(void);
 extern void isr_irq1(void);
+extern void isr_syscall(void);
 
 #define VGA 0xB8000
 static void vga_put(int x, int y, char c, uint8_t color) {
@@ -47,12 +49,23 @@ void idt_init(void) {
     idt_set_gate(14, (uint64_t)isr_page_fault);
     idt_set_gate(32, (uint64_t)isr_irq0);
     idt_set_gate(33, (uint64_t)isr_irq1);
+    idt_set_gate(0x80, (uint64_t)isr_syscall);
+
+    /* Cambiar DPL del gate 0x80 a 3 (accesible desde ring 3) */
+    idt[0x80].type_attr = 0xEE;
 
     idt_load((uint64_t)&idt_ptr);
 }
 
 void isr_handler(registers_t *regs) {
     uint64_t n = regs->int_no;
+
+    /* int 0x80 = syscall */
+    if (n == 0x80) {
+        uint64_t ret = syscall_dispatch(regs->rax, regs->rdi, regs->rsi, regs->rdx);
+        regs->rax = ret;
+        return;
+    }
 
     if (n < IDT_ENTRIES && handlers[n]) {
         handlers[n](regs);
@@ -66,6 +79,21 @@ void isr_handler(registers_t *regs) {
     vga_put(x++, 20, ' ', 0x0C);
     vga_put(x++, 20, '0' + (char)(n / 10), 0x0C);
     vga_put(x++, 20, '0' + (char)(n % 10), 0x0C);
+
+    /* Si es page fault, mostrar CR2 */
+    if (n == 14) {
+        uint64_t cr2;
+        __asm__ volatile ("mov %%cr2, %0" : "=r"(cr2));
+        vga_put(x++, 20, ' ', 0x0C);
+        vga_put(x++, 20, 'C', 0x0C);
+        vga_put(x++, 20, 'R', 0x0C);
+        vga_put(x++, 20, '2', 0x0C);
+        vga_put(x++, 20, '=', 0x0C);
+        const char *hex = "0123456789ABCDEF";
+        for (int i = 15; i >= 0; i--) {
+            vga_put(x++, 20, hex[(cr2 >> (i*4)) & 0xF], 0x0C);
+        }
+    }
 
     __asm__ volatile ("cli");
     for (;;) __asm__ volatile ("hlt");

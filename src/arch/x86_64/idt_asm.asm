@@ -7,6 +7,7 @@ global isr_divide_by_zero
 global isr_page_fault
 global isr_irq0
 global isr_irq1
+global isr_syscall
 
 idt_load:
     lidt [rdi]
@@ -73,6 +74,9 @@ ISR_NOERR divide_by_zero, 0
 ISR_ERR   page_fault,     14
 ISR_NOERR irq0,           32
 ISR_NOERR irq1,           33
+
+; int 0x80 — desde ring 3 (DPL=3)
+ISR_NOERR syscall,        0x80
 
 isr_default:
     push qword 0
