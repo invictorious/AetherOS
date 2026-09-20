@@ -113,10 +113,15 @@ void console_printf(const char *fmt, ...) {
     for (const char *p = fmt; *p; p++) {
         if (*p != '%') { console_putchar(*p); continue; }
         p++;
-        int width = 0;
+        int width = 0, precision = -1;
         char pad = ' ';
         if (*p == '0') { pad = '0'; p++; }
         while (*p >= '0' && *p <= '9') { width = width * 10 + (*p - '0'); p++; }
+        if (*p == '.') {
+            p++;
+            precision = 0;
+            while (*p >= '0' && *p <= '9') { precision = precision * 10 + (*p - '0'); p++; }
+        }
         switch (*p) {
             case 'd': print_int(__builtin_va_arg(args, int)); break;
             case 'u': print_uint(__builtin_va_arg(args, unsigned int), 10, width, pad); break;
@@ -128,7 +133,16 @@ void console_printf(const char *fmt, ...) {
                 else if (*p == 'x') print_uint(__builtin_va_arg(args, unsigned long), 16, width, pad);
                 break;
             }
-            case 's': console_write(__builtin_va_arg(args, const char*)); break;
+            case 's': {
+                const char *s = __builtin_va_arg(args, const char*);
+                int i = 0;
+                if (precision >= 0) {
+                    while (s[i] && i < precision) { console_putchar(s[i]); i++; }
+                } else {
+                    while (*s) console_putchar(*s++);
+                }
+                break;
+            }
             case 'c': console_putchar((char)__builtin_va_arg(args, int)); break;
             case '%': console_putchar('%'); break;
             default: console_putchar('%'); console_putchar(*p); break;

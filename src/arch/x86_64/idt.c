@@ -17,12 +17,8 @@ extern void isr_irq1(void);
 extern void isr_syscall(void);
 extern void isr_win_syscall(void);
 
-#define VGA 0xB8000
-static void vga_put(int x, int y, char c, uint8_t color) {
-    volatile uint8_t *v = (volatile uint8_t *)VGA;
-    v[(y * 80 + x) * 2]     = (uint8_t)c;
-    v[(y * 80 + x) * 2 + 1] = color;
-}
+extern void console_printf(const char *fmt, ...);
+extern void console_write(const char *);
 
 void idt_set_gate(int n, uint64_t handler) {
     idt[n].offset_low  = handler & 0xFFFF;
@@ -42,9 +38,8 @@ void idt_init(void) {
     idt_ptr.limit = sizeof(idt) - 1;
     idt_ptr.base  = (uint64_t)&idt;
 
-    for (int i = 0; i < IDT_ENTRIES; i++) {
+    for (int i = 0; i < IDT_ENTRIES; i++)
         idt_set_gate(i, (uint64_t)isr_default);
-    }
 
     idt_set_gate(0,  (uint64_t)isr_divide_by_zero);
     idt_set_gate(14, (uint64_t)isr_page_fault);
@@ -52,10 +47,8 @@ void idt_init(void) {
     idt_set_gate(33, (uint64_t)isr_irq1);
     idt_set_gate(0x80, (uint64_t)isr_syscall);
     idt_set_gate(0x81, (uint64_t)isr_win_syscall);
-    idt[0x81].type_attr = 0xEE;   /* accesible desde ring 3 */
-
-    /* Cambiar DPL del gate 0x80 a 3 (accesible desde ring 3) */
     idt[0x80].type_attr = 0xEE;
+    idt[0x81].type_attr = 0xEE;
 
     idt_load((uint64_t)&idt_ptr);
 }
@@ -63,9 +56,14 @@ void idt_init(void) {
 void isr_handler(registers_t *regs) {
     uint64_t n = regs->int_no;
 
-    /* int 0x80 = syscall */
     if (n == 0x80) {
         uint64_t ret = syscall_dispatch(regs->rax, regs->rdi, regs->rsi, regs->rdx);
+        regs->rax = ret;
+        return;
+    }
+    if (n == 0x81) {
+        extern uint64_t win_dispatch(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
+        uint64_t ret = win_dispatch(regs->rax, regs->rcx, regs->rdx, regs->r8, regs->r9);
         regs->rax = ret;
         return;
     }
@@ -75,29 +73,17 @@ void isr_handler(registers_t *regs) {
         return;
     }
 
-    const char *msg = "EXCEPCION";
-    int x = 0;
-    for (int i = 0; msg[i]; i++) vga_put(x++, 20, msg[i], 0x0C);
-    vga_put(x++, 20, ':', 0x0C);
-    vga_put(x++, 20, ' ', 0x0C);
-    vga_put(x++, 20, '0' + (char)(n / 10), 0x0C);
-    vga_put(x++, 20, '0' + (char)(n % 10), 0x0C);
+    /* Fallback: imprimir en el cursor actual y halt */
+    console_printf("\n\n[!!!] EXC %lu  RIP=0x%lx  CS=0x%lx  ERR=0x%lx\n",
+                   n, regs->rip, regs->cs, regs->err_code);
 
-    /* Si es page fault, mostrar CR2 */
     if (n == 14) {
         uint64_t cr2;
         __asm__ volatile ("mov %%cr2, %0" : "=r"(cr2));
-        vga_put(x++, 20, ' ', 0x0C);
-        vga_put(x++, 20, 'C', 0x0C);
-        vga_put(x++, 20, 'R', 0x0C);
-        vga_put(x++, 20, '2', 0x0C);
-        vga_put(x++, 20, '=', 0x0C);
-        const char *hex = "0123456789ABCDEF";
-        for (int i = 15; i >= 0; i--) {
-            vga_put(x++, 20, hex[(cr2 >> (i*4)) & 0xF], 0x0C);
-        }
+        console_printf("[!!!] CR2=0x%lx\n", cr2);
     }
 
+    console_write("[!!!] HALT\n");
     __asm__ volatile ("cli");
     for (;;) __asm__ volatile ("hlt");
 }

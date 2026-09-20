@@ -14,7 +14,8 @@ ARCH_ASM := src/arch/x86_64/kernel_entry.asm \
             src/arch/x86_64/switch.asm \
             src/arch/x86_64/gdt_asm.asm \
             src/arch/x86_64/usermode.asm \
-            src/arch/x86_64/win_syscall.asm
+            src/arch/x86_64/win_syscall.asm \
+            src/arch/x86_64/win_stubs.asm
 
 BOOT_ASM := src/arch/x86_64/boot.asm
 
@@ -36,6 +37,8 @@ C_SRCS   := src/arch/x86_64/idt.c \
             src/kernel/exec.c \
             src/kernel/process.c \
             src/win/kernel32.c \
+            src/win/exports.c \
+            src/win/pe.c \
             src/kernel/elf.c
 
 ARCH_OBJS := $(patsubst src/arch/x86_64/%.asm,$(BUILD)/%.o,$(ARCH_ASM))
