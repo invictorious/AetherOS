@@ -67,6 +67,69 @@ static void cmd_run(const char *path) {
     user_println("[shell] proceso terminado");
 }
 
+/* Top: monitor de recursos */
+typedef struct {
+    uint64_t total_mem;
+    uint64_t free_mem;
+    uint64_t heap_used;
+    uint64_t ticks;
+    uint32_t num_procs;
+    uint32_t pids[16];
+    uint32_t states[16];
+    char     names[16][24];
+} sysinfo_t;
+
+static void print_num(uint64_t v) {
+    char b[24]; int i = 0;
+    if (v == 0) { user_print("0"); return; }
+    while (v) { b[i++] = '0' + (v % 10); v /= 10; }
+    while (i--) { char c[2] = { b[i], 0 }; user_print(c); }
+}
+
+static void print_state(uint32_t s) {
+    if (s == 0) user_print("READY ");
+    else if (s == 1) user_print("RUN   ");
+    else if (s == 2) user_print("BLOCK ");
+    else if (s == 3) user_print("ZOMB  ");
+    else user_print("?????");
+}
+
+static void cmd_top(void) {
+    sysinfo_t info;
+    if (sys1(SYS_GETINFO, (uint64_t)&info) != 0) {
+        user_println("[top] error");
+        return;
+    }
+    user_println("");
+    user_println("+----+-------+--------------------------------+");
+    user_println("| PID| STATE | NAME                           |");
+    user_println("+----+-------+--------------------------------+");
+    for (uint32_t i = 0; i < info.num_procs; i++) {
+        user_print("| ");
+        print_num(info.pids[i]);
+        user_print(info.pids[i] < 10 ? "  | " : " | ");
+        print_state(info.states[i]);
+        user_print(" | ");
+        user_print(info.names[i]);
+        user_println("");
+    }
+    user_println("+----+-------+--------------------------------+");
+    user_println("");
+    user_print("RAM total: ");
+    print_num(info.total_mem / 1024 / 1024);
+    user_println(" MB");
+    user_print("RAM libre: ");
+    print_num(info.free_mem / 1024 / 1024);
+    user_println(" MB");
+    user_print("Heap usado: ");
+    print_num(info.heap_used);
+    user_println(" bytes");
+    user_print("Uptime: ");
+    print_num(info.ticks / 100);
+    user_println(" segundos");
+    user_println("");
+}
+
 static void ejecutar_linea(void) {
     if (line_len == 0) return;
 
@@ -78,6 +141,7 @@ static void ejecutar_linea(void) {
         user_println("  pid              - muestra mi PID");
         user_println("  help             - esta ayuda");
         user_println("  clear            - limpia pantalla");
+        user_println("  top              - monitor de recursos");
         user_println("");
         user_println("Demos:");
         user_println("  exe              - hola mundo (PE)");
@@ -94,6 +158,10 @@ static void ejecutar_linea(void) {
         user_print("PID actual: ");
         user_print_dec(sys1(SYS_GETPID, 0));
         user_println("");
+        return;
+    }
+    if (streq(line_buf, "top")) {
+        cmd_top();
         return;
     }
     if (streq(line_buf, "clear")) {

@@ -18,9 +18,42 @@
 #include "version.h"
 #include "../drivers/framebuffer.h"
 #include "window.h"
+extern void console_set_silent(int s);
 #include "debug_overlay.h"
 
 volatile uint64_t ticks = 0;
+static int g_terminal_win = -1;
+int wm_get_terminal(void) { return g_terminal_win; }
+
+int wm_terminal_focused(void) {
+    if (g_terminal_win < 0) return 0;
+    if (!wm_get(g_terminal_win)) return 0;
+    return wm_focused_id() == g_terminal_win;
+}
+
+int kernel_open_terminal(void) {
+    /* Si ya existe, solo enfocar */
+    if (g_terminal_win >= 0 && wm_get(g_terminal_win)) {
+        console_set_silent(0);
+        wm_focus(g_terminal_win);
+        console_set_window(g_terminal_win);
+        wm_draw_all();
+        return g_terminal_win;
+    }
+
+    /* Crear nueva terminal: reactivar consola primero */
+    console_set_silent(0);
+    int id = wm_create(40, 40, 740, 560, "Terminal - AetherOS");
+    if (id < 0) return -1;
+    g_terminal_win = id;
+    wm_focus(id);
+    console_set_window(id);
+    console_clear();
+    console_printf("[AetherOS Terminal]\n");
+    console_printf("> ");
+    wm_draw_all();
+    return id;
+}
 
 extern void user_program(void);
 
@@ -28,36 +61,22 @@ static void timer_handler(registers_t *regs) {
     ticks++;
     pic_send_eoi(0);
 
-    /* Raton: gestion en cada tick */
+    /* Raton: gestion en cada tick, SIEMPRE (incluso sin ventanas) */
     {
-        extern int wm_has_windows(void);
         extern void wm_cursor_hide(void);
         extern void wm_cursor_draw(void);
         extern void wm_handle_mouse(void);
 
-        /* Ocultar el cursor anterior SIEMPRE (incluso sin ventanas) */
         wm_cursor_hide();
-
-        /* Procesar clics/arrastre si hubo cambios */
-        if (mouse_changed() && wm_has_windows()) {
+        if (mouse_changed()) {
             wm_handle_mouse();
         }
-
-        /* Redibujar el cursor en la nueva posicion SIEMPRE */
         wm_cursor_draw();
     }
 
 
 
-    /* Overlay de debug cada 30 ticks (300ms) */
-    if ((ticks % 30) == 0) {
-        extern void debug_overlay_draw(void);
-        extern void wm_cursor_hide(void);
-        extern void wm_cursor_draw(void);
-        wm_cursor_hide();
-        debug_overlay_draw();
-        wm_cursor_draw();
-    }
+
 
     scheduler_tick(regs);
 }
@@ -109,6 +128,16 @@ void kernel_main(void) {
     ata_init();
     if (fat32_init() == 0) console_printf("[OK] FAT32 montado\n");
     else                    console_printf("[!] FAT32 fallo\n");
+
+    /* Ahora si: crear la ventana TERMINAL (heap ya esta listo) */
+    wm_init();
+    int term_win = wm_create(40, 40, 740, 560, "Terminal - AetherOS");
+    g_terminal_win = term_win;
+    wm_focus(term_win);
+    wm_draw_all();
+    console_set_window(term_win);
+
+    console_printf("[OK] Ventana terminal creada (id %d)\n", term_win);
 
     syscall_init();
     process_init();

@@ -34,6 +34,13 @@ void sys_exit(int code) {
 void sys_wait(uint32_t pid) { process_wait(pid); }
 
 uint64_t sys_read(void) {
+    extern int wm_terminal_focused(void);
+    /* Solo leemos teclado si la ventana de terminal tiene el foco */
+    if (!wm_terminal_focused()) {
+        /* Descartar teclas acumuladas mientras no hay foco */
+        while (keyboard_has_key()) (void)keyboard_getchar();
+        return 0;
+    }
     if (!keyboard_has_key()) return 0;
     return (uint64_t)(uint8_t)keyboard_getchar();
 }
@@ -109,6 +116,36 @@ int64_t sys_spawn(const char *path) {
     return (int64_t)p->pid;
 }
 
+/* Estructura de info del sistema que devolvemos al usuario */
+typedef struct {
+    uint64_t total_mem;      /* bytes */
+    uint64_t free_mem;
+    uint64_t heap_used;
+    uint64_t ticks;          /* 100 Hz */
+    uint32_t num_procs;
+    uint32_t pids[16];
+    uint32_t states[16];
+    char     names[16][24];
+} sysinfo_t;
+
+uint64_t sys_getinfo(sysinfo_t *out) {
+    if (!out) return (uint64_t)-1;
+    extern uint64_t pmm_total_memory(void);
+    extern uint64_t pmm_free_memory(void);
+    extern size_t heap_used(void);
+    extern volatile uint64_t ticks;
+
+    out->total_mem  = pmm_total_memory();
+    out->free_mem   = pmm_free_memory();
+    out->heap_used  = heap_used();
+    out->ticks      = ticks;
+
+    /* Recorrer procesos (variable estatica de process.c) */
+    extern void process_dump_for_sysinfo(sysinfo_t *info);
+    process_dump_for_sysinfo(out);
+    return 0;
+}
+
 uint64_t syscall_dispatch(uint64_t nr, uint64_t a1, uint64_t a2, uint64_t a3) {
     switch (nr) {
         case SYS_WRITE:   sys_write((const char*)a1); return 0;
@@ -119,6 +156,7 @@ uint64_t syscall_dispatch(uint64_t nr, uint64_t a1, uint64_t a2, uint64_t a3) {
         case SYS_READ_FD: return (uint64_t)sys_read_fd((int)a1, (void*)a2, a3);
         case SYS_CLOSE:   return (uint64_t)sys_close((int)a1);
         case SYS_CLEAR:   console_clear(); return 0;
+        case SYS_GETINFO: return sys_getinfo((sysinfo_t*)a1);
         case SYS_EXEC:    return (uint64_t)sys_spawn((const char*)a1);  /* alias a spawn */
         case SYS_SPAWN:   return (uint64_t)sys_spawn((const char*)a1);
         case SYS_WAIT:    sys_wait((uint32_t)a1); return 0;

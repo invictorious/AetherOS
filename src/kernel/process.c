@@ -104,3 +104,35 @@ void process_wait(uint32_t pid) {
         __asm__ volatile ("sti; hlt; cli");
     }
 }
+
+
+/* Rellena info de procesos para sys_getinfo */
+typedef struct {
+    uint64_t total_mem;
+    uint64_t free_mem;
+    uint64_t heap_used;
+    uint64_t ticks;
+    uint32_t num_procs;
+    uint32_t pids[16];
+    uint32_t states[16];
+    char     names[16][24];
+} sysinfo_t;
+
+void process_dump_for_sysinfo(sysinfo_t *info) {
+    int n = 0;
+    if (!head) { info->num_procs = 0; return; }
+    process_t *p = head;
+    do {
+        if (n >= 16) break;
+        info->pids[n]   = p->pid;
+        info->states[n] = p->state;
+        /* Nombre generico */
+        const char *nm = (p->pid == 1) ? "shell" : "child";
+        int i = 0;
+        while (nm[i] && i < 23) { info->names[n][i] = nm[i]; i++; }
+        info->names[n][i] = 0;
+        n++;
+        p = p->next;
+    } while (p != head);
+    info->num_procs = n;
+}

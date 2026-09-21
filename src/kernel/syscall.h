@@ -13,6 +13,7 @@
 #define SYS_EXEC       8
 #define SYS_SPAWN      9
 #define SYS_CLEAR      11
+#define SYS_GETINFO    12
 #define SYS_WAIT       10
 
 void     syscall_init(void);

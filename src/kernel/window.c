@@ -118,10 +118,12 @@ void wm_destroy(int id) {
             if (focused_id == id) {
                 focused_id = (num_windows > 0) ? z_order[num_windows - 1] : -1;
             }
-            /* Si no quedan ventanas, reactivar la consola */
-            if (num_windows == 0) {
+            /* Si era la terminal, avisar al kernel */
+            extern int wm_get_terminal(void);
+            if (id == wm_get_terminal()) {
+                /* La terminal fue cerrada; la consola queda huerfana */
                 extern void console_set_silent(int s);
-                console_set_silent(0);
+                console_set_silent(1);
             }
             return;
         }
@@ -205,12 +207,29 @@ static void draw_taskbar(void) {
 
     /* Fondo */
     fb_fill_rect(0, y, sw, WM_TASKBAR_H, WM_COLOR_TASKBAR_BG);
-
-    /* Separador superior */
     fb_fill_rect(0, y, sw, 2, RGB(0, 0, 170));
 
-    /* Boton por cada ventana */
+    /* Boton INICIO a la izquierda */
     int bx = 6;
+    fb_fill_rect(bx, y + 4, 100, WM_TASKBAR_H - 8, RGB(0, 100, 0));
+
+    /* Texto "Inicio" dibujado a mano (fuente FONT_ADDR) */
+    {
+        const char *txt = "Inicio";
+        int tx = bx + 8;
+        int ty = y + 6;
+        for (int k = 0; txt[k]; k++) {
+            const uint8_t *g = FONT_ADDR + (uint8_t)txt[k] * 16;
+            for (int r = 0; r < 16; r++) {
+                uint8_t bits = g[r];
+                for (int col = 0; col < 8; col++)
+                    if (bits & (0x80 >> col))
+                        fb_put_pixel(tx + col, ty + r, RGB(255, 255, 255));
+            }
+            tx += 8;
+        }
+    }
+    bx += 106;
     for (int i = 0; i < num_windows; i++) {
         window_t *w = wm_get(z_order[i]);
         if (!w) continue;
@@ -237,6 +256,12 @@ static void draw_taskbar(void) {
         bx += bw + 4;
         if (bx + bw > sw - 6) break;
     }
+}
+
+void wm_redraw_window(int id) {
+    window_t *w = wm_get(id);
+    if (!w || !w->visible) return;
+    draw_window(w);
 }
 
 void wm_draw_all(void) {
@@ -418,6 +443,17 @@ static uint8_t prev_buttons = 0;
 
 int wm_drag_id(void) { return dragging_id; }
 
+/* Hit test del boton INICIO en la barra de tareas */
+int wm_start_button_hit(int px, int py) {
+    int sh = fb_height();
+    int taskbar_y = sh - WM_TASKBAR_H;
+    if (py < taskbar_y + 4) return 0;
+    if (py >= taskbar_y + WM_TASKBAR_H - 4) return 0;
+    if (px < 6) return 0;
+    if (px >= 6 + 100) return 0;
+    return 1;
+}
+
 /* Punto de entrada: se llama desde el kernel cuando mouse_changed() es 1 */
 void wm_handle_mouse(void) {
     int mx = mouse_x();
@@ -428,13 +464,21 @@ void wm_handle_mouse(void) {
 
     /* --- Click izquierdo pulsado --- */
     if (pressed & 0x01) {
+        /* 0. Boton INICIO: abre/refoca la terminal */
+        if (wm_start_button_hit(mx, my)) {
+            extern int kernel_open_terminal(void);
+            kernel_open_terminal();
+            prev_buttons = btn;
+            return;
+        }
+
         /* 1. Boton de la barra de tareas */
         int id = hit_taskbar_button(mx, my);
         if (id) {
             wm_focus(id);
             wm_draw_all();
         } else {
-            /* 2. Ventana */
+            /* 2. Ventana bajo el cursor */
             id = hit_test_window(mx, my);
             if (id) {
                 window_t *w = wm_get(id);
@@ -454,6 +498,12 @@ void wm_handle_mouse(void) {
                 /* 2c. Cuerpo de la ventana -> solo foco */
                 else {
                     wm_focus(id);
+                    wm_draw_all();
+                }
+            } else {
+                /* 3. Click en el ESCRITORIO -> desenfocar todo */
+                if (focused_id != -1) {
+                    focused_id = -1;
                     wm_draw_all();
                 }
             }
