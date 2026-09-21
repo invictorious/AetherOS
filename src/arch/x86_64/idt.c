@@ -14,6 +14,7 @@ extern void isr_divide_by_zero(void);
 extern void isr_page_fault(void);
 extern void isr_irq0(void);
 extern void isr_irq1(void);
+extern void isr_irq12(void);
 extern void isr_syscall(void);
 extern void isr_win_syscall(void);
 
@@ -45,6 +46,7 @@ void idt_init(void) {
     idt_set_gate(14, (uint64_t)isr_page_fault);
     idt_set_gate(32, (uint64_t)isr_irq0);
     idt_set_gate(33, (uint64_t)isr_irq1);
+    idt_set_gate(44, (uint64_t)isr_irq12);
     idt_set_gate(0x80, (uint64_t)isr_syscall);
     idt_set_gate(0x81, (uint64_t)isr_win_syscall);
     idt[0x80].type_attr = 0xEF;   /* trap gate */

@@ -30,6 +30,7 @@ C_SRCS   := src/arch/x86_64/idt.c \
             src/mm/pmm.c \
             src/mm/heap.c \
             src/drivers/framebuffer.c \
+            src/drivers/mouse.c \
             src/drivers/pic.c \
             src/drivers/pit.c \
             src/drivers/keyboard.c \
@@ -38,10 +39,12 @@ C_SRCS   := src/arch/x86_64/idt.c \
             src/kernel/exec.c \
             src/kernel/process.c \
             src/kernel/window.c \
+            src/kernel/debug_overlay.c \
             src/win/kernel32.c \
             src/win/exports.c \
             src/win/pe.c \
             src/win/user32.c \
+            src/win/gdi32.c \
             src/kernel/elf.c
 
 ARCH_OBJS := $(patsubst src/arch/x86_64/%.asm,$(BUILD)/%.o,$(ARCH_ASM))
@@ -77,15 +80,35 @@ $(BUILD)/aetheros.img: $(BUILD)/boot.bin $(BUILD)/kernel.bin
 run: $(BUILD)/aetheros.img disk.img
 	$(QEMU) -fda $< -boot a \
 	        -drive file=disk.img,format=raw,if=ide,index=0 \
-	        -display gtk
+	        -vnc :1
 
 debug: $(BUILD)/aetheros.img disk.img
 	@timeout 5 $(QEMU) -fda $< -boot a \
 	        -drive file=disk.img,format=raw,if=ide,index=0 \
-	        -display gtk -no-reboot -d int,cpu_reset -D /tmp/qemu.log || true
+	        -vnc :1 -no-reboot -d int,cpu_reset -D /tmp/qemu.log || true
 	@tail -60 /tmp/qemu.log
 
 clean:
 	rm -rf $(BUILD)
 
 .PHONY: all run debug clean
+
+# ============================================================
+# ISO bootable (El Torito con emulacion de floppy)
+# ============================================================
+iso: $(BUILD)/aetheros.img
+	@mkdir -p $(BUILD)/iso
+	cp $(BUILD)/aetheros.img $(BUILD)/iso/boot.img
+	xorriso -as mkisofs \
+	    -o $(BUILD)/aetheros.iso \
+	    -b boot.img \
+	    -V "AETHEROS" \
+	    $(BUILD)/iso/
+	@echo "[OK] $(BUILD)/aetheros.iso"
+
+run-iso: iso
+	$(QEMU) -cdrom $(BUILD)/aetheros.iso -boot d \
+	        -drive file=disk.img,format=raw,if=ide,index=0 \
+	        -vnc :1
+
+.PHONY: iso run-iso

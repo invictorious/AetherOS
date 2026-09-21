@@ -26,6 +26,8 @@ typedef struct {
     char     title[64];
     uint32_t content_bg;
     int      visible;
+    uint32_t *content_buf;      /* buffer del area cliente */
+    int      buf_w, buf_h;
 } window_t;
 
 int       wm_init(void);
@@ -34,7 +36,12 @@ void      wm_destroy(int id);
 void      wm_focus(int id);
 window_t *wm_get(int id);
 int       wm_focused_id(void);
+int       wm_has_windows(void);
 void      wm_draw_all(void);
+void      wm_cursor_draw(void);
+void      wm_cursor_hide(void);
+void      wm_handle_mouse(void);
+int       wm_drag_id(void);
 
 /* "Superficie" de dibujo sobre una ventana */
 void wm_put_pixel(int id, int x, int y, uint32_t color);

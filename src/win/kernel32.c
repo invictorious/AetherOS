@@ -319,6 +319,11 @@ uint64_t win_dispatch(uint64_t nr, uint64_t a1, uint64_t a2,
                                                  uint64_t, uint64_t, uint64_t);
                 return user32_dispatch(nr, a1, a2, a3, a4);
             }
+            if (nr >= 0x4000 && nr < 0x5000) {
+                extern uint64_t gdi32_dispatch(uint64_t, uint64_t,
+                                                uint64_t, uint64_t, uint64_t);
+                return gdi32_dispatch(nr, a1, a2, a3, a4);
+            }
             console_printf("[WIN] syscall 0x%x desconocida\n", (unsigned)nr);
             return 0;
     }

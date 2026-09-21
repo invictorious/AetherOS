@@ -36,6 +36,17 @@ extern void stub_GetDC(void);
 extern void stub_ReleaseDC(void);
 extern void stub_TextOutA(void);
 extern void stub_UpdateWindow(void);
+extern void stub_SetPixel(void);
+extern void stub_MoveToEx(void);
+extern void stub_LineTo(void);
+extern void stub_Rectangle(void);
+extern void stub_Ellipse(void);
+extern void stub_FillRect(void);
+extern void stub_SetTextColor(void);
+extern void stub_SetBkColor(void);
+extern void stub_CreateSolidBrush(void);
+extern void stub_DeleteObject(void);
+extern void stub_FillSolidRect(void);
 
 extern void stub_strlen(void);
 extern void stub_strcmp(void);
@@ -91,6 +102,19 @@ static const win_export_t g_exports[] = {
     {"ReleaseDC",            (void*)stub_ReleaseDC},
     {"TextOutA",             (void*)stub_TextOutA},
     {"UpdateWindow",         (void*)stub_UpdateWindow},
+
+    /* gdi32 */
+    {"SetPixel",             (void*)stub_SetPixel},
+    {"MoveToEx",             (void*)stub_MoveToEx},
+    {"LineTo",               (void*)stub_LineTo},
+    {"Rectangle",            (void*)stub_Rectangle},
+    {"Ellipse",              (void*)stub_Ellipse},
+    {"FillRect",             (void*)stub_FillRect},
+    {"SetTextColor",         (void*)stub_SetTextColor},
+    {"SetBkColor",           (void*)stub_SetBkColor},
+    {"CreateSolidBrush",     (void*)stub_CreateSolidBrush},
+    {"DeleteObject",         (void*)stub_DeleteObject},
+    {"FillSolidRect",        (void*)stub_FillSolidRect},
 
     /* msvcrt */
     {"strlen",               (void*)stub_strlen},

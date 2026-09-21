@@ -175,9 +175,9 @@ static uint64_t win_MessageBeep(uint64_t type) {
  * El .exe puede llamar SetWindowTextA despues para el titulo. */
 static uint64_t win_CreateWindowExA(uint64_t x, uint64_t y,
                                      uint64_t w, uint64_t h) {
-    int id = wm_create((int)x, (int)y, (int)w, (int)h, "Aplicacion");
-    /* A partir de ahora la consola no dibuja para no pisar el WM */
+    /* Silenciar la consola ANTES de crear la ventana */
     console_set_silent(1);
+    int id = wm_create((int)x, (int)y, (int)w, (int)h, "Aplicacion");
     return (uint64_t)id;
 }
 

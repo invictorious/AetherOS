@@ -5,6 +5,7 @@
 #include "../drivers/pic.h"
 #include "../drivers/pit.h"
 #include "../drivers/keyboard.h"
+#include "../drivers/mouse.h"
 #include "../drivers/ata.h"
 #include "../mm/pmm.h"
 #include "../mm/heap.h"
@@ -17,6 +18,7 @@
 #include "version.h"
 #include "../drivers/framebuffer.h"
 #include "window.h"
+#include "debug_overlay.h"
 
 volatile uint64_t ticks = 0;
 
@@ -25,6 +27,38 @@ extern void user_program(void);
 static void timer_handler(registers_t *regs) {
     ticks++;
     pic_send_eoi(0);
+
+    /* Raton: gestion en cada tick */
+    {
+        extern int wm_has_windows(void);
+        extern void wm_cursor_hide(void);
+        extern void wm_cursor_draw(void);
+        extern void wm_handle_mouse(void);
+
+        /* Ocultar el cursor anterior SIEMPRE (incluso sin ventanas) */
+        wm_cursor_hide();
+
+        /* Procesar clics/arrastre si hubo cambios */
+        if (mouse_changed() && wm_has_windows()) {
+            wm_handle_mouse();
+        }
+
+        /* Redibujar el cursor en la nueva posicion SIEMPRE */
+        wm_cursor_draw();
+    }
+
+
+
+    /* Overlay de debug cada 30 ticks (300ms) */
+    if ((ticks % 30) == 0) {
+        extern void debug_overlay_draw(void);
+        extern void wm_cursor_hide(void);
+        extern void wm_cursor_draw(void);
+        wm_cursor_hide();
+        debug_overlay_draw();
+        wm_cursor_draw();
+    }
+
     scheduler_tick(regs);
 }
 
@@ -33,6 +67,12 @@ static void keyboard_irq_handler(registers_t *regs) {
     extern void keyboard_handler(void);
     keyboard_handler();
     pic_send_eoi(1);
+}
+
+static void mouse_irq_handler(registers_t *regs) {
+    (void)regs;
+    mouse_handler();
+    pic_send_eoi(12);
 }
 
 void kernel_main(void) {
@@ -56,7 +96,11 @@ void kernel_main(void) {
     for (int i = 0; i < 16; i++) pic_set_mask(i);
     pic_clear_mask(0);
     pic_clear_mask(1);
-    console_printf("[OK] IDT + PIC + PIT + teclado\n");
+    pic_clear_mask(2);    /* cascade (necesario para IRQ8-15) */
+    pic_clear_mask(12);   /* raton PS/2 */
+    register_interrupt_handler(44, mouse_irq_handler);   /* IRQ12 -> vector 44 */
+    mouse_init();
+    console_printf("[OK] IDT + PIC + PIT + teclado + raton\n");
 
     pmm_init();
     heap_init();

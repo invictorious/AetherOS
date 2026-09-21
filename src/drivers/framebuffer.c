@@ -36,14 +36,37 @@ void fb_put_pixel(uint32_t x, uint32_t y, uint32_t color) {
     }
 }
 
+uint32_t fb_get_pixel(uint32_t x, uint32_t y) {
+    if (x >= fb_w || y >= fb_h) return 0;
+    if (fb_bpp == 32) {
+        volatile uint32_t *p = (volatile uint32_t*)(fb + y * fb_pitch + x * 4);
+        return *p;
+    } else if (fb_bpp == 24) {
+        volatile uint8_t *p = fb + y * fb_pitch + x * 3;
+        return p[0] | (p[1] << 8) | (p[2] << 16);
+    }
+    return 0;
+}
+
 void fb_fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
     if (x + w > fb_w) w = fb_w - x;
     if (y + h > fb_h) h = fb_h - y;
 
     if (fb_bpp == 32) {
+        /* Escribir por pares de 32 bits (mas rapido, menos visible el flash) */
+        uint64_t color64 = ((uint64_t)color << 32) | color;
         for (uint32_t j = 0; j < h; j++) {
-            volatile uint32_t *row = (volatile uint32_t*)(fb + (y + j) * fb_pitch + x * 4);
-            for (uint32_t i = 0; i < w; i++) row[i] = color;
+            volatile uint64_t *row = (volatile uint64_t*)(fb + (y + j) * fb_pitch + x * 4);
+            uint32_t i = 0;
+            /* Escribir de 2 en 2 */
+            for (; i + 1 < w; i += 2) {
+                row[i/2] = color64;
+            }
+            /* Si queda 1 pixel suelto */
+            if (i < w) {
+                volatile uint32_t *rp = (volatile uint32_t*)(fb + (y + j) * fb_pitch + x * 4);
+                rp[i] = color;
+            }
         }
     } else if (fb_bpp == 24) {
         for (uint32_t j = 0; j < h; j++) {

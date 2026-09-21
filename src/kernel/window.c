@@ -1,5 +1,7 @@
 #include "window.h"
 #include "../drivers/framebuffer.h"
+#include "../drivers/mouse.h"
+#include "../mm/heap.h"
 
 /* ------------------------------------------------------------
  * Estado global del gestor de ventanas
@@ -24,6 +26,7 @@ int wm_init(void) {
 }
 
 int wm_focused_id(void) { return focused_id; }
+int wm_has_windows(void) { return num_windows > 0; }
 
 window_t *wm_get(int id) {
     for (int i = 0; i < WM_MAX_WINDOWS; i++) {
@@ -73,6 +76,17 @@ int wm_create(int x, int y, int w, int h, const char *title) {
     win->visible = 1;
     win->content_bg = WM_COLOR_CONTENT;
 
+    /* Buffer del area cliente */
+    win->buf_w = w - 2 * WM_BORDER;
+    win->buf_h = h - 2 * WM_BORDER - WM_TITLE_H;
+    if (win->buf_w < 0) win->buf_w = 0;
+    if (win->buf_h < 0) win->buf_h = 0;
+    win->content_buf = (uint32_t*)kmalloc(win->buf_w * win->buf_h * 4);
+    if (win->content_buf) {
+        for (int k = 0; k < win->buf_w * win->buf_h; k++)
+            win->content_buf[k] = win->content_bg;
+    }
+
     /* Copiar titulo (max 63) */
     int i = 0;
     while (title[i] && i < 63) { win->title[i] = title[i]; i++; }
@@ -87,6 +101,8 @@ int wm_create(int x, int y, int w, int h, const char *title) {
 void wm_destroy(int id) {
     for (int i = 0; i < WM_MAX_WINDOWS; i++) {
         if (windows[i].used && windows[i].id == id) {
+            if (windows[i].content_buf) kfree(windows[i].content_buf);
+            windows[i].content_buf = 0;
             windows[i].used = 0;
             /* Quitar de z_order */
             for (int j = 0; j < num_windows; j++) {
@@ -101,6 +117,11 @@ void wm_destroy(int id) {
             }
             if (focused_id == id) {
                 focused_id = (num_windows > 0) ? z_order[num_windows - 1] : -1;
+            }
+            /* Si no quedan ventanas, reactivar la consola */
+            if (num_windows == 0) {
+                extern void console_set_silent(int s);
+                console_set_silent(0);
             }
             return;
         }
@@ -157,6 +178,17 @@ static void draw_window(window_t *w) {
             }
         }
         tx += 8;
+    }
+
+    /* Contenido (restaurar desde buffer) */
+    if (w->content_buf) {
+        int ox = w->x + WM_BORDER;
+        int oy = w->y + WM_BORDER + WM_TITLE_H;
+        for (int j = 0; j < w->buf_h; j++) {
+            for (int i = 0; i < w->buf_w; i++) {
+                fb_put_pixel(ox + i, oy + j, w->content_buf[j * w->buf_w + i]);
+            }
+        }
     }
 
     /* Borde */
@@ -227,11 +259,16 @@ void wm_draw_all(void) {
 void wm_put_pixel(int id, int x, int y, uint32_t color) {
     window_t *w = wm_get(id);
     if (!w) return;
-    /* Offset por borde + barra de titulo */
+    if (x < 0 || y < 0 || x >= w->buf_w || y >= w->buf_h) return;
+
+    /* Guardar en buffer */
+    if (w->content_buf) {
+        w->content_buf[y * w->buf_w + x] = color;
+    }
+
+    /* Y pintar en pantalla */
     int px = w->x + WM_BORDER + x;
     int py = w->y + WM_BORDER + WM_TITLE_H + y;
-    if (x < 0 || y < 0 || x >= w->w - 2 * WM_BORDER ||
-        y >= w->h - 2 * WM_BORDER - WM_TITLE_H) return;
     fb_put_pixel(px, py, color);
 }
 
@@ -254,4 +291,196 @@ void wm_draw_text(int id, int x, int y, const char *s, uint32_t fg) {
         x += 8;
         s++;
     }
+}
+
+
+/* ============================================================
+ * CURSOR DEL RATON
+ * ============================================================ */
+
+#define CUR_W 12
+#define CUR_H 19
+#define CUR_MASK_SIZE (CUR_W * CUR_H)
+
+/* Forma del cursor (1 = pintar). Flecha clasica. */
+static const uint16_t cursor_shape[CUR_H] = {
+    0x8000, 0xC000, 0xE000, 0xF000, 0xF800, 0xFC00,
+    0xFE00, 0xFF00, 0xFF80, 0xFFC0, 0xFFE0, 0xF800,
+    0xD800, 0x8C00, 0x0C00, 0x0600, 0x0600, 0x0300, 0x0300,
+};
+
+/* Guardamos el fondo que habia debajo del cursor para restaurarlo */
+static uint32_t saved_pixels[CUR_MASK_SIZE];
+static int      saved_x = -1, saved_y = -1;
+static int      cursor_visible = 0;
+
+void wm_cursor_hide(void) {
+    if (!cursor_visible) return;
+    if (saved_x < 0) return;
+    for (int j = 0; j < CUR_H; j++) {
+        for (int i = 0; i < CUR_W; i++) {
+            fb_put_pixel(saved_x + i, saved_y + j, saved_pixels[j * CUR_W + i]);
+        }
+    }
+    cursor_visible = 0;
+}
+
+void wm_cursor_draw(void) {
+    int cx = mouse_x();
+    int cy = mouse_y();
+
+    /* 1. Guardar fondo real de 12x19 */
+    for (int j = 0; j < CUR_H; j++) {
+        for (int i = 0; i < CUR_W; i++) {
+            saved_pixels[j * CUR_W + i] = fb_get_pixel(cx + i, cy + j);
+        }
+    }
+    saved_x = cx;
+    saved_y = cy;
+
+    /* 2. Dibujar la flecha blanca con contorno negro para visibilidad */
+    for (int j = 0; j < CUR_H; j++) {
+        uint16_t row = cursor_shape[j];
+        for (int i = 0; i < CUR_W; i++) {
+            if (row & (0x8000 >> i)) {
+                fb_put_pixel(cx + i, cy + j, RGB(255, 255, 255));
+            }
+        }
+    }
+    cursor_visible = 1;
+}
+
+/* ============================================================
+ * HIT TESTING + INTERACCION
+ * ============================================================ */
+
+/* Devuelve el id de la ventana bajo (px,py) teniendo en cuenta z-order.
+ * 0 si no hay ninguna. */
+static int hit_test_window(int px, int py) {
+    for (int i = num_windows - 1; i >= 0; i--) {
+        window_t *w = wm_get(z_order[i]);
+        if (!w || !w->visible) continue;
+        if (px >= w->x && px < w->x + w->w &&
+            py >= w->y && py < w->y + w->h) {
+            return w->id;
+        }
+    }
+    return 0;
+}
+
+/* Comprueba si (px,py) esta sobre el boton [X] de la ventana w */
+static int hit_close_button(window_t *w, int px, int py) {
+    if (!w) return 0;
+    int bx = w->x + w->w - 60;
+    int by = w->y + WM_BORDER + 3;
+    /* Boton X = el tercero: bx+40, by, 16x14 */
+    int xx = bx + 40, xy = by;
+    if (px >= xx && px < xx + 16 && py >= xy && py < xy + 14) return 1;
+    return 0;
+}
+
+/* Comprueba si (px,py) esta sobre la barra de titulo de la ventana */
+static int hit_title_bar(window_t *w, int px, int py) {
+    if (!w) return 0;
+    int bx = w->x + w->w - 60;
+    if (px >= w->x + WM_BORDER && px < bx &&
+        py >= w->y + WM_BORDER && py < w->y + WM_BORDER + WM_TITLE_H) {
+        return 1;
+    }
+    return 0;
+}
+
+/* Comprueba si (px,py) esta sobre algun boton de la barra de tareas */
+static int hit_taskbar_button(int px, int py) {
+    int sh = fb_height();
+    int taskbar_y = sh - WM_TASKBAR_H;
+    if (py < taskbar_y) return 0;
+
+    int bx = 6;
+    for (int i = 0; i < num_windows; i++) {
+        window_t *w = wm_get(z_order[i]);
+        if (!w) continue;
+        int bw = 130;
+        if (px >= bx && px < bx + bw &&
+            py >= taskbar_y + 4 && py < taskbar_y + WM_TASKBAR_H - 4) {
+            return w->id;
+        }
+        bx += bw + 4;
+    }
+    return 0;
+}
+
+/* Estado de arrastre */
+static int dragging_id = -1;
+static int drag_offset_x = 0;
+static int drag_offset_y = 0;
+static uint8_t prev_buttons = 0;
+
+int wm_drag_id(void) { return dragging_id; }
+
+/* Punto de entrada: se llama desde el kernel cuando mouse_changed() es 1 */
+void wm_handle_mouse(void) {
+    int mx = mouse_x();
+    int my = mouse_y();
+    uint8_t btn = mouse_buttons();
+    uint8_t pressed = btn & ~prev_buttons;   /* bits que se acaban de pulsar */
+    uint8_t released = prev_buttons & ~btn;  /* bits que se acaban de soltar */
+
+    /* --- Click izquierdo pulsado --- */
+    if (pressed & 0x01) {
+        /* 1. Boton de la barra de tareas */
+        int id = hit_taskbar_button(mx, my);
+        if (id) {
+            wm_focus(id);
+            wm_draw_all();
+        } else {
+            /* 2. Ventana */
+            id = hit_test_window(mx, my);
+            if (id) {
+                window_t *w = wm_get(id);
+
+                /* 2a. Boton [X] */
+                if (hit_close_button(w, mx, my)) {
+                    wm_destroy(id);
+                    wm_draw_all();
+                }
+                /* 2b. Barra de titulo -> empezar arrastre */
+                else if (hit_title_bar(w, mx, my)) {
+                    wm_focus(id);
+                    dragging_id = id;
+                    drag_offset_x = mx - w->x;
+                    drag_offset_y = my - w->y;
+                }
+                /* 2c. Cuerpo de la ventana -> solo foco */
+                else {
+                    wm_focus(id);
+                    wm_draw_all();
+                }
+            }
+        }
+    }
+
+    /* --- Mover mientras se arrastra --- */
+    if (dragging_id >= 0 && (btn & 0x01)) {
+        window_t *w = wm_get(dragging_id);
+        if (w) {
+            w->x = mx - drag_offset_x;
+            w->y = my - drag_offset_y;
+            /* Limites */
+            if (w->x < 0) w->x = 0;
+            if (w->y < 0) w->y = 0;
+            if (w->x + w->w > (int)fb_width())  w->x = fb_width()  - w->w;
+            if (w->y + w->h > (int)fb_height() - WM_TASKBAR_H)
+                w->y = fb_height() - WM_TASKBAR_H - w->h;
+
+            wm_draw_all();
+        }
+    }
+
+    /* --- Click soltado: parar arrastre --- */
+    if (released & 0x01) {
+        dragging_id = -1;
+    }
+
+    prev_buttons = btn;
 }

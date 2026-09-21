@@ -50,6 +50,17 @@ WINSTUB ReleaseDC,         0x300B
 WINSTUB TextOutA,          0x300C
 WINSTUB UpdateWindow,      0x300D
 
+; ---- gdi32 ----
+WINSTUB SetPixel,          0x4001
+WINSTUB MoveToEx,          0x4002
+WINSTUB LineTo,            0x4003
+WINSTUB FillRect,          0x4006
+WINSTUB SetTextColor,      0x4007
+WINSTUB SetBkColor,        0x4008
+WINSTUB CreateSolidBrush,  0x4009
+WINSTUB DeleteObject,      0x400A
+WINSTUB FillSolidRect,     0x400B
+
 ; ---- msvcrt ----
 WINSTUB strlen,         0x2001
 WINSTUB strcmp,         0x2002
@@ -87,5 +98,30 @@ stub_CreateWindowExA:
     mov r8,  [rsp + 56]    ; W
     mov r9,  [rsp + 64]    ; H
     mov rax, 0x3004        ; WIN_CREATEWINDOWEXA
+    int 0x81
+    ret
+
+
+; --- Rectangle custom (5 args: hdc, l, t, r, b) ---
+; El 5o argumento (bottom) va en la pila con shadow space
+global stub_Rectangle
+stub_Rectangle:
+    ; [rsp+0]  return
+    ; [rsp+8..32] shadow
+    ; [rsp+40] bottom
+    ; Pasamos al kernel: hdc, l, t, r (4 args) + bottom
+    ; El kernel recibira en RCX, RDX, R8, R9 = hdc, l, t, r
+    ; Y el bottom se lo pasamos codificado en el numero de syscall + 0x100
+    ; ... Demasiado complejo. Mejor: leer bottom y guardar en R10
+    mov r10, [rsp + 40]        ; bottom
+    mov rax, 0x4004
+    int 0x81
+    ret
+
+; --- Ellipse custom (5 args: hdc, l, t, r, b) ---
+global stub_Ellipse
+stub_Ellipse:
+    mov r10, [rsp + 40]
+    mov rax, 0x4005
     int 0x81
     ret

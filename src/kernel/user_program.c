@@ -86,6 +86,7 @@ static void ejecutar_linea(void) {
         user_println("  msgbox           - cuadro de dialogo");
         user_println("  win              - demo del ABI binario");
         user_println("  winapp           - aplicaciones con ventanas");
+        user_println("  gfx              - dibujo GDI (formas)");
         user_println("");
         return;
     }
@@ -105,6 +106,7 @@ static void ejecutar_linea(void) {
     if (streq(line_buf, "msgbox")) { cmd_run("MSGBOX.EXE"); return; }
     if (streq(line_buf, "win"))    { cmd_run("WIN.BIN");    return; }
     if (streq(line_buf, "winapp")) { cmd_run("WINAPP.EXE"); return; }
+    if (streq(line_buf, "gfx"))    { cmd_run("GFX.EXE");    return; }
     if (starts_with(line_buf, "cat "))  { cmd_cat(line_buf + 4); return; }
     if (starts_with(line_buf, "run "))  { cmd_run(line_buf + 4); return; }
     user_println("[shell] comando desconocido");

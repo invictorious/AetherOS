@@ -45,6 +45,22 @@
 #define WIN_TEXTOUTA           0x300C
 #define WIN_UPDATEWINDOW       0x300D
 
+/* gdi32 */
+#define WIN_SETPIXEL           0x4001
+#define WIN_MOVETOEX           0x4002
+#define WIN_LINETO             0x4003
+#define WIN_RECTANGLE          0x4004
+#define WIN_ELLIPSE            0x4005
+#define WIN_FILLRECT           0x4006
+#define WIN_SETTEXTCOLOR       0x4007
+#define WIN_SETBKCOLOR         0x4008
+#define WIN_CREATESOLIDBRUSH   0x4009
+#define WIN_DELETEOBJECT       0x400A
+#define WIN_FILLSOLIDRECT      0x400B  /* shortcut: rellenar rectangulo */
+
+/* Colores RGB (formato Windows: 0x00BBGGRR) */
+#define RGB_WIN(r,g,b) ((uint32_t)((r) | ((g) << 8) | ((b) << 16)))
+
 /* Estilos de ventana (simplificados) */
 #define WS_OVERLAPPEDWINDOW 0x00CF0000
 #define WS_VISIBLE          0x10000000
